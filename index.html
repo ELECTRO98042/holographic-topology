@@ -4,12 +4,13 @@
   FILE: index.html
   CREATOR: Steven Jones
   DATE: 2026-10-05
-  VERSION: 1.6.0
+  VERSION: 1.7.0
   
   DESCRIPTION:
   An interactive client-side simulation exploring emergent holographic network 
-  topologies, pseudo-3D spatial depth planes, dynamic node telemetry, 
-  multi-mode observer lenses, and fault recovery mechanics inspired by QFT and IIT.
+  topologies, external JSON model import/export for research workflows, Ryu-Takayanagi 
+  entanglement entropy ($S_{EE}$), Integrated Information ($\Phi$), pseudo-3D spatial 
+  depth planes, and dynamic fault recovery mechanics.
   
   ENVIRONMENT & TOOLSTACK:
   - OS: macOS Sequoia (Hackintosh Architecture)
@@ -18,6 +19,8 @@
   - Dependencies: None (Zero external framework bloat)
   
   CHANGE LOG:
+  - v1.7.0 (2026-10-05): Added external JSON topology import and snapshot export 
+                         utilities, plus real-time $S_{EE}$ and $\Phi$ metrics.
   - v1.6.0 (2026-10-05): Added interactive node telemetry HUD drawer and 
                          pseudo-3D spatial depth plane oscillation.
   - v1.5.0 (2026-10-05): Added observation mode switching (Entanglement Matrix, 
@@ -70,7 +73,7 @@
             padding: 15px 20px;
             border-radius: 8px;
             backdrop-filter: blur(8px);
-            width: 260px;
+            width: 280px;
             z-index: 10;
         }
         .telemetry-hud {
@@ -101,6 +104,7 @@
         .metric {
             color: #38bdf8;
             font-weight: bold;
+            font-family: monospace;
         }
         .control-group {
             margin-top: 10px;
@@ -126,6 +130,29 @@
             padding: 4px;
             font-size: 0.78rem;
         }
+        .btn-row {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+        button, label.file-btn {
+            flex: 1;
+            background: #1e293b;
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            padding: 6px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            text-align: center;
+            transition: background 0.2s;
+        }
+        button:hover, label.file-btn:hover {
+            background: rgba(56, 189, 248, 0.15);
+        }
+        input[type="file"] {
+            display: none;
+        }
         .telemetry-row {
             display: flex;
             justify-content: space-between;
@@ -147,8 +174,16 @@
         <p><strong>Left Click Node:</strong> Inspect Telemetry</p>
         <p><strong>Right Click Node:</strong> Sever Node (Fault + Pulse)</p>
         <p>Network Integrity: <span id="integrityMetric" class="metric">100%</span></p>
+        <p>Entanglement S(EE): <span id="entropyMetric" class="metric">0.00</span></p>
+        <p>Integrated Info (&Phi;): <span id="phiMetric" class="metric">0.00</span></p>
 
         <div class="control-group">
+            <div class="btn-row">
+                <button id="exportBtn" autocomplete="off">Export Snapshot</button>
+                <label class="file-btn" for="importFile">Import Model</label>
+                <input type="file" id="importFile" accept=".json" autocomplete="off">
+            </div>
+
             <label><span>Observer Lens</span></label>
             <select id="modeSelect" autocomplete="off">
                 <option value="matrix">Entanglement Matrix</option>
@@ -198,13 +233,78 @@
         const pulseSlider = document.getElementById('pulseSlider');
         const modeSelect = document.getElementById('modeSelect');
         const telemetryBox = document.getElementById('telemetryBox');
+        const exportBtn = document.getElementById('exportBtn');
+        const importFile = document.getElementById('importFile');
 
         let selectedNode = null;
         let nodeCounter = 0;
+        let initialActiveCount = 0;
 
         rangeSlider.addEventListener('input', (e) => document.getElementById('valRange').innerText = e.target.value);
         driftSlider.addEventListener('input', (e) => document.getElementById('valDrift').innerText = e.target.value);
         pulseSlider.addEventListener('input', (e) => document.getElementById('valPulse').innerText = e.target.value);
+
+        // Export Snapshot Utility
+        exportBtn.addEventListener('click', () => {
+            const snapshot = {
+                version: "1.7.0",
+                timestamp: new Date().toISOString(),
+                canvas: { width, height },
+                nodes: nodes.map(n => ({
+                    id: n.id,
+                    x: n.x,
+                    y: n.y,
+                    z: n.z,
+                    isCore: n.isCore,
+                    isSevered: n.isSevered,
+                    health: n.health
+                }))
+            };
+
+            const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `holographic-topology-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        // Import Model Utility
+        importFile.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const data = JSON.parse(event.target.result);
+                    if (data.nodes && Array.isArray(data.nodes)) {
+                        nodes.length = 0;
+                        pulses.length = 0;
+                        selectedNode = null;
+                        telemetryBox.style.display = 'none';
+                        nodeCounter = 0;
+
+                        data.nodes.forEach(nd => {
+                            nodeCounter++;
+                            const newNode = new Node(nd.x, nd.y, nd.isCore);
+                            newNode.id = nd.id || `N-${String(nodeCounter).padStart(3, '0')}`;
+                            newNode.z = nd.z !== undefined ? nd.z : newNode.z;
+                            newNode.isSevered = nd.isSevered || false;
+                            newNode.health = nd.health !== undefined ? nd.health : 1.0;
+                            nodes.push(newNode);
+                        });
+
+                        initialActiveCount = nodes.filter(n => !n.isSevered).length;
+                    }
+                } catch (err) {
+                    console.error("Failed to parse imported topology model:", err);
+                }
+                importFile.value = '';
+            };
+            reader.readAsText(file);
+        });
 
         class Pulse {
             constructor(x, y) {
@@ -243,7 +343,7 @@
                 this.id = `N-${String(++nodeCounter).padStart(3, '0')}`;
                 this.x = x;
                 this.y = y;
-                this.z = (Math.random() - 0.5) * 2; // Spatial depth coordinate (-1 to 1)
+                this.z = (Math.random() - 0.5) * 2; 
                 this.zSpeed = (Math.random() - 0.5) * 0.01;
                 this.isCore = isCore;
                 
@@ -268,7 +368,6 @@
                     this.pulseEffect -= 0.03;
                 }
 
-                // Spatial Depth Oscillation
                 this.z += this.zSpeed;
                 if (this.z < -1 || this.z > 1) this.zSpeed *= -1;
 
@@ -292,7 +391,6 @@
                 if (this.health <= 0) return;
                 const mode = modeSelect.value;
 
-                // Depth scaling multiplier
                 const depthScale = 1 + (this.z * 0.3);
                 const renderRadius = Math.max(2, this.baseRadius * depthScale);
 
@@ -339,6 +437,8 @@
         for (let i = 0; i < initialNodes; i++) {
             nodes.push(new Node(Math.random() * (width - 100) + 50, Math.random() * (height - 100) + 50, false));
         }
+
+        initialActiveCount = nodes.length;
 
         window.addEventListener('click', (e) => {
             if (e.target.closest('.hud') || e.target.closest('.telemetry-hud')) return;
@@ -426,6 +526,10 @@
             }
 
             const maxDistance = parseFloat(rangeSlider.value);
+            let totalBondWeight = 0;
+            let coreBondCount = 0;
+            let activePairs = 0;
+
             for (let i = 0; i < nodes.length; i++) {
                 nodes[i].draw();
                 for (let j = i + 1; j < nodes.length; j++) {
@@ -438,11 +542,17 @@
                     if (dist < maxDistance) {
                         nodes[i].activeBonds++;
                         nodes[j].activeBonds++;
+                        activePairs++;
 
                         const factor = 1 - (dist / maxDistance);
                         const isCoreBond = nodes[i].isCore && nodes[j].isCore;
+                        if (isCoreBond) coreBondCount++;
+
                         const weightMultiplier = isCoreBond ? 1.5 : 1.0;
-                        const alpha = (Math.pow(factor, 1.5) * weightMultiplier).toFixed(2);
+                        const bondStrength = Math.pow(factor, 1.5) * weightMultiplier;
+                        totalBondWeight += bondStrength;
+
+                        const alpha = bondStrength.toFixed(2);
 
                         ctx.beginPath();
                         ctx.moveTo(nodes[i].x, nodes[i].y);
@@ -462,6 +572,14 @@
                 }
             }
 
+            // Physics Metrics Computation
+            const activeNodes = nodes.filter(n => !n.isSevered);
+            const sEE = (totalBondWeight * 0.46).toFixed(2);
+            const phi = (activePairs > 0 ? (coreBondCount * 2.5 + totalBondWeight) / activeNodes.length : 0).toFixed(2);
+
+            document.getElementById('entropyMetric').innerText = sEE;
+            document.getElementById('phiMetric').innerText = phi;
+
             // Update Telemetry Panel
             if (selectedNode) {
                 document.getElementById('telId').innerText = selectedNode.id;
@@ -473,9 +591,8 @@
                 document.getElementById('telVel').innerText = speed.toFixed(2);
             }
 
-            const totalActiveInitial = initialNodes + initialCores;
-            const currentActive = nodes.filter(n => !n.isSevered).length;
-            const integrity = totalActiveInitial > 0 ? Math.round((currentActive / totalActiveInitial) * 100) : 0;
+            const currentActive = activeNodes.length;
+            const integrity = initialActiveCount > 0 ? Math.round((currentActive / initialActiveCount) * 100) : 100;
             document.getElementById('integrityMetric').innerText = `${Math.min(integrity, 100)}%`;
 
             requestAnimationFrame(animate);
