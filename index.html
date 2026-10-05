@@ -1,15 +1,17 @@
+HTML
+
 <!--
   ==============================================================
   PROJECT: Holographic Topology Simulator
   FILE: index.html
   CREATOR: Steven Jones
   DATE: 2026-10-05
-  VERSION: 1.2.0
+  VERSION: 1.3.0
   
   DESCRIPTION:
   An interactive client-side simulation exploring emergent holographic network 
-  topologies, entanglement weighting, and dynamic fault recovery mechanics 
-  inspired by QFT and Integrated Information Theory (IIT).
+  topologies, core-peripheral node differentiation, entanglement weighting, 
+  and dynamic fault recovery mechanics inspired by QFT and IIT.
   
   ENVIRONMENT & TOOLSTACK:
   - OS: macOS Sequoia (Hackintosh Architecture)
@@ -18,6 +20,8 @@
   - Dependencies: None (Zero external framework bloat)
   
   CHANGE LOG:
+  - v1.3.0 (2026-10-05): Introduced core-peripheral node typing with 
+                         asymmetric entanglement capacity and bulk anchoring.
   - v1.2.0 (2026-10-05): Added autonomous healing pulses upon fault 
                          injection and refined distance-gradient 
                          entanglement weighting.
@@ -82,8 +86,8 @@
 
     <div class="hud">
         <h1>Holographic Topology Field</h1>
-        <p><strong>Left Click:</strong> Inject new node</p>
-        <p><strong>Right Click Node:</strong> Sever node (Fault Event + Healing Pulse)</p>
+        <p><strong>Left Click:</strong> Inject Peripheral Node</p>
+        <p><strong>Right Click Node:</strong> Sever Node (Fault Event + Healing Pulse)</p>
         <p>Network Integrity: <span id="integrityMetric" class="metric">100%</span></p>
     </div>
 
@@ -103,7 +107,6 @@
             height = canvas.height = window.innerHeight;
         });
 
-        // Pulse class for healing / shockwave effects
         class Pulse {
             constructor(x, y) {
                 this.x = x;
@@ -129,15 +132,16 @@
         }
 
         class Node {
-            constructor(x, y) {
+            constructor(x, y, isCore = false) {
                 this.x = x;
                 this.y = y;
-                this.vx = (Math.random() - 0.5) * 0.8;
-                this.vy = (Math.random() - 0.5) * 0.8;
-                this.radius = 5;
+                this.isCore = isCore;
+                this.vx = (Math.random() - 0.5) * (isCore ? 0.3 : 0.8);
+                this.vy = (Math.random() - 0.5) * (isCore ? 0.3 : 0.8);
+                this.radius = isCore ? 8 : 4;
                 this.health = 1.0; 
                 this.isSevered = false;
-                this.pulseEffect = 0; // Flash intensity when hit by healing pulse
+                this.pulseEffect = 0;
             }
 
             update() {
@@ -167,14 +171,14 @@
                     ctx.fillStyle = `rgba(239, 68, 68, ${this.health})`; 
                     ctx.shadowColor = '#ef4444';
                 } else if (this.pulseEffect > 0) {
-                    ctx.fillStyle = '#ffffff'; // Flash white when healing pulse sweeps past
+                    ctx.fillStyle = '#ffffff';
                     ctx.shadowColor = '#38bdf8';
                 } else {
-                    ctx.fillStyle = '#38bdf8';
+                    ctx.fillStyle = this.isCore ? '#0284c7' : '#38bdf8';
                     ctx.shadowColor = '#38bdf8';
                 }
 
-                ctx.shadowBlur = 10 + (this.pulseEffect * 15);
+                ctx.shadowBlur = (this.isCore ? 15 : 8) + (this.pulseEffect * 15);
                 ctx.fill();
                 ctx.shadowBlur = 0;
             }
@@ -182,16 +186,31 @@
 
         const nodes = [];
         const pulses = [];
-        const initialNodes = 35;
+        const initialNodes = 30;
+        const initialCores = 5;
 
+        // Seed Core Bulk Anchors
+        for (let i = 0; i < initialCores; i++) {
+            nodes.push(new Node(
+                Math.random() * (width - 200) + 100, 
+                Math.random() * (height - 200) + 100, 
+                true
+            ));
+        }
+
+        // Seed Peripheral Boundary Nodes
         for (let i = 0; i < initialNodes; i++) {
-            nodes.push(new Node(Math.random() * (width - 100) + 50, Math.random() * (height - 100) + 50));
+            nodes.push(new Node(
+                Math.random() * (width - 100) + 50, 
+                Math.random() * (height - 100) + 50, 
+                false
+            ));
         }
 
         window.addEventListener('click', (e) => {
             if (e.clientX < 280 && e.clientY < 140) return;
-            nodes.push(new Node(e.clientX, e.clientY));
-            if (nodes.length > 60) nodes.shift();
+            nodes.push(new Node(e.clientX, e.clientY, false));
+            if (nodes.length > 70) nodes.shift();
         });
 
         window.addEventListener('contextmenu', (e) => {
@@ -207,9 +226,8 @@
                 }
             });
 
-            if (closest && minDist < 40) {
+            if (closest && minDist < 45) {
                 closest.isSevered = true;
-                // Emit autonomous healing pulse from the fault point
                 pulses.push(new Pulse(closest.x, closest.y));
             }
         });
@@ -218,12 +236,10 @@
             ctx.fillStyle = 'rgba(11, 15, 25, 0.25)';
             ctx.fillRect(0, 0, width, height);
 
-            // Update and draw pulses
             for (let i = pulses.length - 1; i >= 0; i--) {
                 pulses[i].update();
                 pulses[i].draw();
 
-                // Check intersection with nodes to trigger local "healing glow"
                 nodes.forEach(node => {
                     if (!node.isSevered) {
                         const dist = Math.hypot(node.x - pulses[i].x, node.y - pulses[i].y);
@@ -238,7 +254,6 @@
                 }
             }
 
-            // Update and filter nodes
             for (let i = nodes.length - 1; i >= 0; i--) {
                 nodes[i].update();
                 if (nodes[i].health <= 0) {
@@ -246,8 +261,7 @@
                 }
             }
 
-            // Draw entanglement bonds with distance gradients
-            const maxDistance = 150;
+            const maxDistance = 160;
             for (let i = 0; i < nodes.length; i++) {
                 nodes[i].draw();
                 for (let j = i + 1; j < nodes.length; j++) {
@@ -259,19 +273,23 @@
 
                     if (dist < maxDistance) {
                         const factor = 1 - (dist / maxDistance);
-                        const alpha = Math.pow(factor, 1.5).toFixed(2); // Exponential falloff for realistic field density
+                        const isCoreBond = nodes[i].isCore && nodes[j].isCore;
+                        const weightMultiplier = isCoreBond ? 1.5 : 1.0;
+                        const alpha = (Math.pow(factor, 1.5) * weightMultiplier).toFixed(2);
 
                         ctx.beginPath();
                         ctx.moveTo(nodes[i].x, nodes[i].y);
                         ctx.lineTo(nodes[j].x, nodes[j].y);
-                        ctx.strokeStyle = `rgba(56, 189, 248, ${alpha * 0.5})`;
-                        ctx.lineWidth = factor * 2;
+                        ctx.strokeStyle = isCoreBond ? `rgba(2, 132, 199, ${alpha * 0.7})` : `rgba(56, 189, 248, ${alpha * 0.4})`;
+                        ctx.lineWidth = factor * (isCoreBond ? 3 : 1.5);
                         ctx.stroke();
                     }
                 }
             }
 
-            const integrity = nodes.length > 0 ? Math.round((nodes.filter(n => !n.isSevered).length / initialNodes) * 100) : 0;
+            const totalActiveInitial = initialNodes + initialCores;
+            const currentActive = nodes.filter(n => !n.isSevered).length;
+            const integrity = totalActiveInitial > 0 ? Math.round((currentActive / totalActiveInitial) * 100) : 0;
             document.getElementById('integrityMetric').innerText = `${Math.min(integrity, 100)}%`;
 
             requestAnimationFrame(animate);
