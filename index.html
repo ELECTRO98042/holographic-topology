@@ -4,11 +4,11 @@
   FILE: index.html
   CREATOR: Steven Jones
   DATE: 2026-10-05
-  VERSION: 1.4.0
+  VERSION: 1.4.1
   
   DESCRIPTION:
   An interactive client-side simulation exploring emergent holographic network 
-  topologies, core-peripheral node differentiation, dynamic field variable controls, 
+  topologies, core-peripheral node differentiation, live reactive physics sliders, 
   and fault recovery mechanics inspired by QFT and IIT.
   
   ENVIRONMENT & TOOLSTACK:
@@ -18,8 +18,11 @@
   - Dependencies: None (Zero external framework bloat)
   
   CHANGE LOG:
+  - v1.4.1 (2026-10-05): Fixed live reactive physics scaling for drift velocity 
+                         and pulse expansion speed, and disabled input 
+                         state caching on refresh.
   - v1.4.0 (2026-10-05): Added interactive HUD parameter controls for live 
-                         tuning of entanglement distance, drift velocity, 
+                         tuning of entanglement range, drift velocity, 
                          and pulse speed.
   - v1.3.0 (2026-10-05): Introduced core-peripheral node typing with 
                          asymmetric entanglement capacity and bulk anchoring.
@@ -112,13 +115,13 @@
 
         <div class="control-group">
             <label><span>Entanglement Range</span><span id="valRange">160</span></label>
-            <input type="range" id="rangeSlider" min="80" max="300" value="160">
+            <input type="range" id="rangeSlider" min="80" max="300" value="160" autocomplete="off">
 
             <label><span>Drift Velocity</span><span id="valDrift">0.8</span></label>
-            <input type="range" id="driftSlider" min="0.1" max="2.5" step="0.1" value="0.8">
+            <input type="range" id="driftSlider" min="0.1" max="3.0" step="0.1" value="0.8" autocomplete="off">
 
             <label><span>Pulse Expansion Speed</span><span id="valPulse">4</span></label>
-            <input type="range" id="pulseSlider" min="1" max="10" value="4">
+            <input type="range" id="pulseSlider" min="1" max="15" value="4" autocomplete="off">
         </div>
     </div>
 
@@ -156,6 +159,7 @@
             }
 
             update() {
+                // Reads slider live every frame for instant feedback
                 this.radius += parseFloat(pulseSlider.value);
                 this.alpha -= 0.015;
             }
@@ -175,17 +179,16 @@
                 this.x = x;
                 this.y = y;
                 this.isCore = isCore;
-                this.updateVelocity();
+                
+                // Initialize direction unit vector
+                const angle = Math.random() * Math.PI * 2;
+                this.dirX = Math.cos(angle);
+                this.dirY = Math.sin(angle);
+                
                 this.radius = isCore ? 8 : 4;
                 this.health = 1.0; 
                 this.isSevered = false;
                 this.pulseEffect = 0;
-            }
-
-            updateVelocity() {
-                const speedMod = parseFloat(driftSlider.value) * (this.isCore ? 0.35 : 1.0);
-                this.vx = (Math.random() - 0.5) * speedMod;
-                this.vy = (Math.random() - 0.5) * speedMod;
             }
 
             update() {
@@ -198,11 +201,22 @@
                     this.pulseEffect -= 0.03;
                 }
 
-                this.x += this.vx;
-                this.y += this.vy;
+                // Rescale speed live based on drift slider
+                const currentDrift = parseFloat(driftSlider.value);
+                const speed = currentDrift * (this.isCore ? 0.35 : 1.0);
 
-                if (this.x < 50 || this.x > width - 50) this.vx *= -1;
-                if (this.y < 50 || this.y > height - 50) this.vy *= -1;
+                this.x += this.dirX * speed;
+                this.y += this.dirY * speed;
+
+                // Wall reflection
+                if (this.x < 50 || this.x > width - 50) {
+                    this.dirX *= -1;
+                    this.x = Math.max(50, Math.min(width - 50, this.x));
+                }
+                if (this.y < 50 || this.y > height - 50) {
+                    this.dirY *= -1;
+                    this.y = Math.max(50, Math.min(height - 50, this.y));
+                }
             }
 
             draw() {
@@ -242,7 +256,7 @@
         }
 
         window.addEventListener('click', (e) => {
-            if (e.target.closest('.hud') || e.clientX < 300 && e.clientY < 260) return;
+            if (e.target.closest('.hud') || (e.clientX < 300 && e.clientY < 260)) return;
             nodes.push(new Node(e.clientX, e.clientY, false));
             if (nodes.length > 70) nodes.shift();
         });
