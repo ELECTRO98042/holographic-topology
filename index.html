@@ -4,12 +4,12 @@
   FILE: index.html
   CREATOR: Steven Jones
   DATE: 2026-10-05
-  VERSION: 1.5.0
+  VERSION: 1.6.0
   
   DESCRIPTION:
   An interactive client-side simulation exploring emergent holographic network 
-  topologies, multi-mode observer lenses, live reactive physics sliders, 
-  and fault recovery mechanics inspired by QFT and IIT.
+  topologies, pseudo-3D spatial depth planes, dynamic node telemetry, 
+  multi-mode observer lenses, and fault recovery mechanics inspired by QFT and IIT.
   
   ENVIRONMENT & TOOLSTACK:
   - OS: macOS Sequoia (Hackintosh Architecture)
@@ -18,6 +18,8 @@
   - Dependencies: None (Zero external framework bloat)
   
   CHANGE LOG:
+  - v1.6.0 (2026-10-05): Added interactive node telemetry HUD drawer and 
+                         pseudo-3D spatial depth plane oscillation.
   - v1.5.0 (2026-10-05): Added observation mode switching (Entanglement Matrix, 
                          Bulk Hologram, and Fault Resilience lenses).
   - v1.4.1 (2026-10-05): Fixed live reactive physics scaling for drift velocity 
@@ -71,12 +73,26 @@
             width: 260px;
             z-index: 10;
         }
-        h1 {
+        .telemetry-hud {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            padding: 15px 20px;
+            border-radius: 8px;
+            backdrop-filter: blur(8px);
+            width: 220px;
+            z-index: 10;
+            display: none;
+        }
+        h1, h2 {
             font-size: 1.1rem;
             margin: 0 0 5px 0;
             color: #38bdf8;
             letter-spacing: 0.05em;
         }
+        h2 { font-size: 0.95rem; }
         p {
             margin: 0 0 5px 0;
             font-size: 0.82rem;
@@ -110,14 +126,26 @@
             padding: 4px;
             font-size: 0.78rem;
         }
+        .telemetry-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.78rem;
+            margin-bottom: 4px;
+            color: #cbd5e1;
+        }
+        .telemetry-val {
+            font-family: monospace;
+            color: #38bdf8;
+        }
     </style>
 </head>
 <body>
 
     <div class="hud">
         <h1>Holographic Topology</h1>
-        <p><strong>Left Click:</strong> Inject Peripheral Node</p>
-        <p><strong>Right Click:</strong> Sever Node (Fault + Pulse)</p>
+        <p><strong>Left Click Canvas:</strong> Inject Node</p>
+        <p><strong>Left Click Node:</strong> Inspect Telemetry</p>
+        <p><strong>Right Click Node:</strong> Sever Node (Fault + Pulse)</p>
         <p>Network Integrity: <span id="integrityMetric" class="metric">100%</span></p>
 
         <div class="control-group">
@@ -137,6 +165,15 @@
             <label><span>Pulse Expansion Speed</span><span id="valPulse">4</span></label>
             <input type="range" id="pulseSlider" min="1" max="15" value="4" autocomplete="off">
         </div>
+    </div>
+
+    <div id="telemetryBox" class="telemetry-hud">
+        <h2>Node Telemetry</h2>
+        <div class="telemetry-row"><span>ID:</span><span id="telId" class="telemetry-val">--</span></div>
+        <div class="telemetry-row"><span>Class:</span><span id="telClass" class="telemetry-val">--</span></div>
+        <div class="telemetry-row"><span>Active Bonds:</span><span id="telBonds" class="telemetry-val">0</span></div>
+        <div class="telemetry-row"><span>Z-Depth:</span><span id="telDepth" class="telemetry-val">0.00</span></div>
+        <div class="telemetry-row"><span>Velocity:</span><span id="telVel" class="telemetry-val">0.00</span></div>
     </div>
 
     <div id="canvas-container">
@@ -160,6 +197,10 @@
         const driftSlider = document.getElementById('driftSlider');
         const pulseSlider = document.getElementById('pulseSlider');
         const modeSelect = document.getElementById('modeSelect');
+        const telemetryBox = document.getElementById('telemetryBox');
+
+        let selectedNode = null;
+        let nodeCounter = 0;
 
         rangeSlider.addEventListener('input', (e) => document.getElementById('valRange').innerText = e.target.value);
         driftSlider.addEventListener('input', (e) => document.getElementById('valDrift').innerText = e.target.value);
@@ -199,18 +240,22 @@
 
         class Node {
             constructor(x, y, isCore = false) {
+                this.id = `N-${String(++nodeCounter).padStart(3, '0')}`;
                 this.x = x;
                 this.y = y;
+                this.z = (Math.random() - 0.5) * 2; // Spatial depth coordinate (-1 to 1)
+                this.zSpeed = (Math.random() - 0.5) * 0.01;
                 this.isCore = isCore;
                 
                 const angle = Math.random() * Math.PI * 2;
                 this.dirX = Math.cos(angle);
                 this.dirY = Math.sin(angle);
                 
-                this.radius = isCore ? 8 : 4;
+                this.baseRadius = isCore ? 8 : 4;
                 this.health = 1.0; 
                 this.isSevered = false;
                 this.pulseEffect = 0;
+                this.activeBonds = 0;
             }
 
             update() {
@@ -222,6 +267,10 @@
                 if (this.pulseEffect > 0) {
                     this.pulseEffect -= 0.03;
                 }
+
+                // Spatial Depth Oscillation
+                this.z += this.zSpeed;
+                if (this.z < -1 || this.z > 1) this.zSpeed *= -1;
 
                 const currentDrift = parseFloat(driftSlider.value);
                 const speed = currentDrift * (this.isCore ? 0.35 : 1.0);
@@ -243,10 +292,17 @@
                 if (this.health <= 0) return;
                 const mode = modeSelect.value;
 
+                // Depth scaling multiplier
+                const depthScale = 1 + (this.z * 0.3);
+                const renderRadius = Math.max(2, this.baseRadius * depthScale);
+
                 ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.arc(this.x, this.y, renderRadius, 0, Math.PI * 2);
                 
-                if (this.isSevered) {
+                if (this === selectedNode) {
+                    ctx.fillStyle = '#f59e0b';
+                    ctx.shadowColor = '#f59e0b';
+                } else if (this.isSevered) {
                     ctx.fillStyle = `rgba(239, 68, 68, ${this.health})`; 
                     ctx.shadowColor = '#ef4444';
                 } else if (this.pulseEffect > 0) {
@@ -265,7 +321,7 @@
                     }
                 }
 
-                ctx.shadowBlur = (this.isCore ? 15 : 8) + (this.pulseEffect * 15);
+                ctx.shadowBlur = ((this.isCore ? 15 : 8) + (this.pulseEffect * 15)) * depthScale;
                 ctx.fill();
                 ctx.shadowBlur = 0;
             }
@@ -285,14 +341,33 @@
         }
 
         window.addEventListener('click', (e) => {
-            if (e.target.closest('.hud') || (e.clientX < 300 && e.clientY < 300)) return;
-            nodes.push(new Node(e.clientX, e.clientY, false));
-            if (nodes.length > 70) nodes.shift();
+            if (e.target.closest('.hud') || e.target.closest('.telemetry-hud')) return;
+
+            let clickedNode = null;
+            let minDist = Infinity;
+
+            nodes.forEach(node => {
+                const dist = Math.hypot(node.x - e.clientX, node.y - e.clientY);
+                if (dist < minDist) {
+                    minDist = dist;
+                    clickedNode = node;
+                }
+            });
+
+            if (clickedNode && minDist < 25) {
+                selectedNode = clickedNode;
+                telemetryBox.style.display = 'block';
+            } else {
+                selectedNode = null;
+                telemetryBox.style.display = 'none';
+                nodes.push(new Node(e.clientX, e.clientY, false));
+                if (nodes.length > 70) nodes.shift();
+            }
         });
 
         window.addEventListener('contextmenu', (e) => {
             e.preventDefault();
-            if (e.target.closest('.hud')) return;
+            if (e.target.closest('.hud') || e.target.closest('.telemetry-hud')) return;
 
             let closest = null;
             let minDist = Infinity;
@@ -308,6 +383,10 @@
             if (closest && minDist < 45) {
                 closest.isSevered = true;
                 pulses.push(new Pulse(closest.x, closest.y));
+                if (selectedNode === closest) {
+                    selectedNode = null;
+                    telemetryBox.style.display = 'none';
+                }
             }
         });
 
@@ -335,8 +414,12 @@
                 }
             }
 
+            nodes.forEach(n => {
+                n.update();
+                n.activeBonds = 0;
+            });
+
             for (let i = nodes.length - 1; i >= 0; i--) {
-                nodes[i].update();
                 if (nodes[i].health <= 0) {
                     nodes.splice(i, 1);
                 }
@@ -353,6 +436,9 @@
                     const dist = Math.sqrt(dx * dx + dy * dy);
 
                     if (dist < maxDistance) {
+                        nodes[i].activeBonds++;
+                        nodes[j].activeBonds++;
+
                         const factor = 1 - (dist / maxDistance);
                         const isCoreBond = nodes[i].isCore && nodes[j].isCore;
                         const weightMultiplier = isCoreBond ? 1.5 : 1.0;
@@ -374,6 +460,17 @@
                         ctx.stroke();
                     }
                 }
+            }
+
+            // Update Telemetry Panel
+            if (selectedNode) {
+                document.getElementById('telId').innerText = selectedNode.id;
+                document.getElementById('telClass').innerText = selectedNode.isCore ? 'Core Anchor' : 'Boundary';
+                document.getElementById('telBonds').innerText = selectedNode.activeBonds;
+                document.getElementById('telDepth').innerText = selectedNode.z.toFixed(2);
+                
+                const speed = parseFloat(driftSlider.value) * (selectedNode.isCore ? 0.35 : 1.0);
+                document.getElementById('telVel').innerText = speed.toFixed(2);
             }
 
             const totalActiveInitial = initialNodes + initialCores;
