@@ -1,16 +1,19 @@
+Here is the updated codebase for v1.8.0, integrating persistent local storage so that the simulation automatically saves and restores topology state across browser sessions.
+HTML
+
 <!--
   ==============================================================
   PROJECT: Holographic Topology Simulator
   FILE: index.html
   CREATOR: Steven Jones
   DATE: 2026-10-05
-  VERSION: 1.7.0
+  VERSION: 1.8.0
   
   DESCRIPTION:
   An interactive client-side simulation exploring emergent holographic network 
-  topologies, external JSON model import/export for research workflows, Ryu-Takayanagi 
-  entanglement entropy ($S_{EE}$), Integrated Information ($\Phi$), pseudo-3D spatial 
-  depth planes, and dynamic fault recovery mechanics.
+  topologies, local storage persistence, external JSON model import/export for 
+  research workflows, Ryu-Takayanagi entanglement entropy ($S_{EE}$), Integrated 
+  Information ($\Phi$), pseudo-3D spatial depth planes, and dynamic fault recovery mechanics.
   
   ENVIRONMENT & TOOLSTACK:
   - OS: macOS Sequoia (Hackintosh Architecture)
@@ -19,6 +22,8 @@
   - Dependencies: None (Zero external framework bloat)
   
   CHANGE LOG:
+  - v1.8.0 (2026-10-05): Added persistent localStorage auto-saving and state restoration 
+                         for seamless workspace continuity.
   - v1.7.0 (2026-10-05): Added external JSON topology import and snapshot export 
                          utilities, plus real-time $S_{EE}$ and $\Phi$ metrics.
   - v1.6.0 (2026-10-05): Added interactive node telemetry HUD drawer and 
@@ -179,9 +184,10 @@
 
         <div class="control-group">
             <div class="btn-row">
-                <button id="exportBtn" autocomplete="off">Export Snapshot</button>
-                <label class="file-btn" for="importFile">Import Model</label>
+                <button id="exportBtn" autocomplete="off">Export</button>
+                <label class="file-btn" for="importFile">Import</label>
                 <input type="file" id="importFile" accept=".json" autocomplete="off">
+                <button id="resetStateBtn" autocomplete="off">Reset</button>
             </div>
 
             <label><span>Observer Lens</span></label>
@@ -235,6 +241,7 @@
         const telemetryBox = document.getElementById('telemetryBox');
         const exportBtn = document.getElementById('exportBtn');
         const importFile = document.getElementById('importFile');
+        const resetStateBtn = document.getElementById('resetStateBtn');
 
         let selectedNode = null;
         let nodeCounter = 0;
@@ -244,10 +251,33 @@
         driftSlider.addEventListener('input', (e) => document.getElementById('valDrift').innerText = e.target.value);
         pulseSlider.addEventListener('input', (e) => document.getElementById('valPulse').innerText = e.target.value);
 
+        const STORAGE_KEY = 'holographic_topology_state_v1.8';
+
+        function saveToLocalStorage() {
+            const state = {
+                version: "1.8.0",
+                timestamp: new Date().toISOString(),
+                nodes: nodes.map(n => ({
+                    id: n.id,
+                    x: n.x,
+                    y: n.y,
+                    z: n.z,
+                    isCore: n.isCore,
+                    isSevered: n.isSevered,
+                    health: n.health
+                }))
+            };
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            } catch (err) {
+                console.error("Failed to save state to localStorage:", err);
+            }
+        }
+
         // Export Snapshot Utility
         exportBtn.addEventListener('click', () => {
             const snapshot = {
-                version: "1.7.0",
+                version: "1.8.0",
                 timestamp: new Date().toISOString(),
                 canvas: { width, height },
                 nodes: nodes.map(n => ({
@@ -280,23 +310,8 @@
                 try {
                     const data = JSON.parse(event.target.result);
                     if (data.nodes && Array.isArray(data.nodes)) {
-                        nodes.length = 0;
-                        pulses.length = 0;
-                        selectedNode = null;
-                        telemetryBox.style.display = 'none';
-                        nodeCounter = 0;
-
-                        data.nodes.forEach(nd => {
-                            nodeCounter++;
-                            const newNode = new Node(nd.x, nd.y, nd.isCore);
-                            newNode.id = nd.id || `N-${String(nodeCounter).padStart(3, '0')}`;
-                            newNode.z = nd.z !== undefined ? nd.z : newNode.z;
-                            newNode.isSevered = nd.isSevered || false;
-                            newNode.health = nd.health !== undefined ? nd.health : 1.0;
-                            nodes.push(newNode);
-                        });
-
-                        initialActiveCount = nodes.filter(n => !n.isSevered).length;
+                        loadNodesFromData(data.nodes);
+                        saveToLocalStorage();
                     }
                 } catch (err) {
                     console.error("Failed to parse imported topology model:", err);
@@ -304,6 +319,11 @@
                 importFile.value = '';
             };
             reader.readAsText(file);
+        });
+
+        resetStateBtn.addEventListener('click', () => {
+            localStorage.removeItem(STORAGE_KEY);
+            initDefaultTopology();
         });
 
         class Pulse {
@@ -427,18 +447,65 @@
 
         const nodes = [];
         const pulses = [];
-        const initialNodes = 30;
-        const initialCores = 5;
 
-        for (let i = 0; i < initialCores; i++) {
-            nodes.push(new Node(Math.random() * (width - 200) + 100, Math.random() * (height - 200) + 100, true));
+        function loadNodesFromData(nodeDataList) {
+            nodes.length = 0;
+            pulses.length = 0;
+            selectedNode = null;
+            telemetryBox.style.display = 'none';
+            nodeCounter = 0;
+
+            nodeDataList.forEach(nd => {
+                nodeCounter++;
+                const newNode = new Node(nd.x, nd.y, nd.isCore);
+                newNode.id = nd.id || `N-${String(nodeCounter).padStart(3, '0')}`;
+                newNode.z = nd.z !== undefined ? nd.z : newNode.z;
+                newNode.isSevered = nd.isSevered || false;
+                newNode.health = nd.health !== undefined ? nd.health : 1.0;
+                nodes.push(newNode);
+            });
+
+            initialActiveCount = nodes.filter(n => !n.isSevered).length;
         }
 
-        for (let i = 0; i < initialNodes; i++) {
-            nodes.push(new Node(Math.random() * (width - 100) + 50, Math.random() * (height - 100) + 50, false));
+        function initDefaultTopology() {
+            nodes.length = 0;
+            pulses.length = 0;
+            selectedNode = null;
+            telemetryBox.style.display = 'none';
+            nodeCounter = 0;
+
+            const initialNodes = 30;
+            const initialCores = 5;
+
+            for (let i = 0; i < initialCores; i++) {
+                nodes.push(new Node(Math.random() * (width - 200) + 100, Math.random() * (height - 200) + 100, true));
+            }
+
+            for (let i = 0; i < initialNodes; i++) {
+                nodes.push(new Node(Math.random() * (width - 100) + 50, Math.random() * (height - 100) + 50, false));
+            }
+
+            initialActiveCount = nodes.length;
+            saveToLocalStorage();
         }
 
-        initialActiveCount = nodes.length;
+        // Initialization from LocalStorage or Default
+        const savedStateJSON = localStorage.getItem(STORAGE_KEY);
+        if (savedStateJSON) {
+            try {
+                const parsed = JSON.parse(savedStateJSON);
+                if (parsed.nodes && Array.isArray(parsed.nodes) && parsed.nodes.length > 0) {
+                    loadNodesFromData(parsed.nodes);
+                } else {
+                    initDefaultTopology();
+                }
+            } catch (e) {
+                initDefaultTopology();
+            }
+        } else {
+            initDefaultTopology();
+        }
 
         window.addEventListener('click', (e) => {
             if (e.target.closest('.hud') || e.target.closest('.telemetry-hud')) return;
@@ -462,6 +529,7 @@
                 telemetryBox.style.display = 'none';
                 nodes.push(new Node(e.clientX, e.clientY, false));
                 if (nodes.length > 70) nodes.shift();
+                saveToLocalStorage();
             }
         });
 
@@ -487,8 +555,11 @@
                     selectedNode = null;
                     telemetryBox.style.display = 'none';
                 }
+                saveToLocalStorage();
             }
         });
+
+        let saveThrottleTimer = 0;
 
         function animate() {
             ctx.fillStyle = 'rgba(11, 15, 25, 0.25)';
@@ -519,10 +590,15 @@
                 n.activeBonds = 0;
             });
 
+            let removedDead = false;
             for (let i = nodes.length - 1; i >= 0; i--) {
                 if (nodes[i].health <= 0) {
                     nodes.splice(i, 1);
+                    removedDead = true;
                 }
+            }
+            if (removedDead) {
+                saveToLocalStorage();
             }
 
             const maxDistance = parseFloat(rangeSlider.value);
