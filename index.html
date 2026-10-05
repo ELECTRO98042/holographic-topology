@@ -4,11 +4,11 @@
   FILE: index.html
   CREATOR: Steven Jones
   DATE: 2026-10-05
-  VERSION: 1.4.1
+  VERSION: 1.5.0
   
   DESCRIPTION:
   An interactive client-side simulation exploring emergent holographic network 
-  topologies, core-peripheral node differentiation, live reactive physics sliders, 
+  topologies, multi-mode observer lenses, live reactive physics sliders, 
   and fault recovery mechanics inspired by QFT and IIT.
   
   ENVIRONMENT & TOOLSTACK:
@@ -18,9 +18,10 @@
   - Dependencies: None (Zero external framework bloat)
   
   CHANGE LOG:
+  - v1.5.0 (2026-10-05): Added observation mode switching (Entanglement Matrix, 
+                         Bulk Hologram, and Fault Resilience lenses).
   - v1.4.1 (2026-10-05): Fixed live reactive physics scaling for drift velocity 
-                         and pulse expansion speed, and disabled input 
-                         state caching on refresh.
+                         and pulse speed, and disabled input state caching.
   - v1.4.0 (2026-10-05): Added interactive HUD parameter controls for live 
                          tuning of entanglement range, drift velocity, 
                          and pulse speed.
@@ -97,11 +98,17 @@
             color: #cbd5e1;
             margin-bottom: 3px;
         }
-        input[type="range"] {
+        input[type="range"], select {
             width: 100%;
             accent-color: #38bdf8;
             margin-bottom: 8px;
             cursor: pointer;
+            background: #1e293b;
+            color: #e2e8f0;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 4px;
+            padding: 4px;
+            font-size: 0.78rem;
         }
     </style>
 </head>
@@ -114,6 +121,13 @@
         <p>Network Integrity: <span id="integrityMetric" class="metric">100%</span></p>
 
         <div class="control-group">
+            <label><span>Observer Lens</span></label>
+            <select id="modeSelect" autocomplete="off">
+                <option value="matrix">Entanglement Matrix</option>
+                <option value="bulk">Bulk Hologram Projection</option>
+                <option value="fault">Fault Resilience View</option>
+            </select>
+
             <label><span>Entanglement Range</span><span id="valRange">160</span></label>
             <input type="range" id="rangeSlider" min="80" max="300" value="160" autocomplete="off">
 
@@ -145,6 +159,7 @@
         const rangeSlider = document.getElementById('rangeSlider');
         const driftSlider = document.getElementById('driftSlider');
         const pulseSlider = document.getElementById('pulseSlider');
+        const modeSelect = document.getElementById('modeSelect');
 
         rangeSlider.addEventListener('input', (e) => document.getElementById('valRange').innerText = e.target.value);
         driftSlider.addEventListener('input', (e) => document.getElementById('valDrift').innerText = e.target.value);
@@ -159,16 +174,24 @@
             }
 
             update() {
-                // Reads slider live every frame for instant feedback
                 this.radius += parseFloat(pulseSlider.value);
                 this.alpha -= 0.015;
             }
 
             draw() {
                 if (this.alpha <= 0) return;
+                const mode = modeSelect.value;
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.strokeStyle = `rgba(56, 189, 248, ${this.alpha})`;
+                
+                if (mode === 'fault') {
+                    ctx.strokeStyle = `rgba(239, 68, 68, ${this.alpha})`;
+                } else if (mode === 'bulk') {
+                    ctx.strokeStyle = `rgba(147, 51, 234, ${this.alpha})`;
+                } else {
+                    ctx.strokeStyle = `rgba(56, 189, 248, ${this.alpha})`;
+                }
+                
                 ctx.lineWidth = 2;
                 ctx.stroke();
             }
@@ -180,7 +203,6 @@
                 this.y = y;
                 this.isCore = isCore;
                 
-                // Initialize direction unit vector
                 const angle = Math.random() * Math.PI * 2;
                 this.dirX = Math.cos(angle);
                 this.dirY = Math.sin(angle);
@@ -201,14 +223,12 @@
                     this.pulseEffect -= 0.03;
                 }
 
-                // Rescale speed live based on drift slider
                 const currentDrift = parseFloat(driftSlider.value);
                 const speed = currentDrift * (this.isCore ? 0.35 : 1.0);
 
                 this.x += this.dirX * speed;
                 this.y += this.dirY * speed;
 
-                // Wall reflection
                 if (this.x < 50 || this.x > width - 50) {
                     this.dirX *= -1;
                     this.x = Math.max(50, Math.min(width - 50, this.x));
@@ -221,6 +241,7 @@
 
             draw() {
                 if (this.health <= 0) return;
+                const mode = modeSelect.value;
 
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
@@ -230,10 +251,18 @@
                     ctx.shadowColor = '#ef4444';
                 } else if (this.pulseEffect > 0) {
                     ctx.fillStyle = '#ffffff';
-                    ctx.shadowColor = '#38bdf8';
+                    ctx.shadowColor = mode === 'bulk' ? '#9333ea' : '#38bdf8';
                 } else {
-                    ctx.fillStyle = this.isCore ? '#0284c7' : '#38bdf8';
-                    ctx.shadowColor = '#38bdf8';
+                    if (mode === 'bulk') {
+                        ctx.fillStyle = this.isCore ? '#7e22ce' : '#c084fc';
+                        ctx.shadowColor = '#9333ea';
+                    } else if (mode === 'fault') {
+                        ctx.fillStyle = this.isCore ? '#047857' : '#10b981';
+                        ctx.shadowColor = '#10b981';
+                    } else {
+                        ctx.fillStyle = this.isCore ? '#0284c7' : '#38bdf8';
+                        ctx.shadowColor = '#38bdf8';
+                    }
                 }
 
                 ctx.shadowBlur = (this.isCore ? 15 : 8) + (this.pulseEffect * 15);
@@ -256,7 +285,7 @@
         }
 
         window.addEventListener('click', (e) => {
-            if (e.target.closest('.hud') || (e.clientX < 300 && e.clientY < 260)) return;
+            if (e.target.closest('.hud') || (e.clientX < 300 && e.clientY < 300)) return;
             nodes.push(new Node(e.clientX, e.clientY, false));
             if (nodes.length > 70) nodes.shift();
         });
@@ -285,6 +314,8 @@
         function animate() {
             ctx.fillStyle = 'rgba(11, 15, 25, 0.25)';
             ctx.fillRect(0, 0, width, height);
+
+            const mode = modeSelect.value;
 
             for (let i = pulses.length - 1; i >= 0; i--) {
                 pulses[i].update();
@@ -330,7 +361,15 @@
                         ctx.beginPath();
                         ctx.moveTo(nodes[i].x, nodes[i].y);
                         ctx.lineTo(nodes[j].x, nodes[j].y);
-                        ctx.strokeStyle = isCoreBond ? `rgba(2, 132, 199, ${alpha * 0.7})` : `rgba(56, 189, 248, ${alpha * 0.4})`;
+                        
+                        if (mode === 'bulk') {
+                            ctx.strokeStyle = isCoreBond ? `rgba(147, 51, 234, ${alpha * 0.8})` : `rgba(192, 132, 252, ${alpha * 0.3})`;
+                        } else if (mode === 'fault') {
+                            ctx.strokeStyle = isCoreBond ? `rgba(16, 185, 129, ${alpha * 0.8})` : `rgba(52, 211, 153, ${alpha * 0.3})`;
+                        } else {
+                            ctx.strokeStyle = isCoreBond ? `rgba(2, 132, 199, ${alpha * 0.7})` : `rgba(56, 189, 248, ${alpha * 0.4})`;
+                        }
+
                         ctx.lineWidth = factor * (isCoreBond ? 3 : 1.5);
                         ctx.stroke();
                     }
