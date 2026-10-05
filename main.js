@@ -1,5 +1,6 @@
 import { ExportManager } from './exportManager.js';
 import { FaultInjector } from './faultInjector.js';
+import { PhiVisualizer } from './phiVisualizer.js';
 
 // Assuming `simulatorInstance` and `canvasElement` exist in your app setup:
 const exportManager = new ExportManager(simulatorInstance);
@@ -17,9 +18,20 @@ document.getElementById('btn-boundary').addEventListener('click', () => faultInj
 document.getElementById('btn-noise').addEventListener('click', () => faultInjector.injectPhaseNoise());
 document.getElementById('btn-clear-faults').addEventListener('click', () => faultInjector.clearFaults());
 
-// In your main simulation loop (e.g., inside requestAnimationFrame or update routine):
-// Call logTick on each step to record metrics:
-exportManager.logTick({
-    s_ee: simulatorInstance.currentSEE,
-    phi: simulatorInstance.currentPhi
-});
+// Instantiate telemetry visualizer targeting the new canvas
+const phiCanvas = document.getElementById('phi-canvas');
+const phiVisualizer = new PhiVisualizer(phiCanvas);
+
+// Inside your main simulation render/update loop:
+function simulationLoop() {
+    // ... existing simulator steps ...
+
+    // Feed real-time metrics into the visualizer and logger
+    phiVisualizer.update(simulatorInstance.currentPhi, simulatorInstance.currentSEE);
+    exportManager.logTick({
+        s_ee: simulatorInstance.currentSEE,
+        phi: simulatorInstance.currentPhi
+    });
+
+    requestAnimationFrame(simulationLoop);
+}
