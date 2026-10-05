@@ -1,9 +1,10 @@
-<!--=============================================================
+<!--
+  ==============================================================
   PROJECT: Holographic Topology Simulator
   FILE: index.html
   CREATOR: Steven Jones
   DATE: 2026-10-05
-  VERSION: 1.1.0
+  VERSION: 1.2.0
   
   DESCRIPTION:
   An interactive client-side simulation exploring emergent holographic network 
@@ -17,6 +18,9 @@
   - Dependencies: None (Zero external framework bloat)
   
   CHANGE LOG:
+  - v1.2.0 (2026-10-05): Added autonomous healing pulses upon fault 
+                         injection and refined distance-gradient 
+                         entanglement weighting.
   - v1.1.0 (2026-10-05): Added right-click fault injection (node severing),
                          dynamic bond recalculation, and real-time network 
                          integrity HUD tracking.
@@ -79,7 +83,7 @@
     <div class="hud">
         <h1>Holographic Topology Field</h1>
         <p><strong>Left Click:</strong> Inject new node</p>
-        <p><strong>Right Click Node:</strong> Sever node (Fault Event)</p>
+        <p><strong>Right Click Node:</strong> Sever node (Fault Event + Healing Pulse)</p>
         <p>Network Integrity: <span id="integrityMetric" class="metric">100%</span></p>
     </div>
 
@@ -99,6 +103,31 @@
             height = canvas.height = window.innerHeight;
         });
 
+        // Pulse class for healing / shockwave effects
+        class Pulse {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.radius = 10;
+                this.maxRadius = 250;
+                this.alpha = 0.8;
+            }
+
+            update() {
+                this.radius += 4;
+                this.alpha -= 0.015;
+            }
+
+            draw() {
+                if (this.alpha <= 0) return;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(56, 189, 248, ${this.alpha})`;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+        }
+
         class Node {
             constructor(x, y) {
                 this.x = x;
@@ -108,12 +137,17 @@
                 this.radius = 5;
                 this.health = 1.0; 
                 this.isSevered = false;
+                this.pulseEffect = 0; // Flash intensity when hit by healing pulse
             }
 
             update() {
                 if (this.isSevered) {
                     this.health -= 0.02;
                     return;
+                }
+
+                if (this.pulseEffect > 0) {
+                    this.pulseEffect -= 0.03;
                 }
 
                 this.x += this.vx;
@@ -132,19 +166,24 @@
                 if (this.isSevered) {
                     ctx.fillStyle = `rgba(239, 68, 68, ${this.health})`; 
                     ctx.shadowColor = '#ef4444';
+                } else if (this.pulseEffect > 0) {
+                    ctx.fillStyle = '#ffffff'; // Flash white when healing pulse sweeps past
+                    ctx.shadowColor = '#38bdf8';
                 } else {
                     ctx.fillStyle = '#38bdf8';
                     ctx.shadowColor = '#38bdf8';
                 }
 
-                ctx.shadowBlur = 10;
+                ctx.shadowBlur = 10 + (this.pulseEffect * 15);
                 ctx.fill();
                 ctx.shadowBlur = 0;
             }
         }
 
         const nodes = [];
+        const pulses = [];
         const initialNodes = 35;
+
         for (let i = 0; i < initialNodes; i++) {
             nodes.push(new Node(Math.random() * (width - 100) + 50, Math.random() * (height - 100) + 50));
         }
@@ -170,6 +209,8 @@
 
             if (closest && minDist < 40) {
                 closest.isSevered = true;
+                // Emit autonomous healing pulse from the fault point
+                pulses.push(new Pulse(closest.x, closest.y));
             }
         });
 
@@ -177,6 +218,27 @@
             ctx.fillStyle = 'rgba(11, 15, 25, 0.25)';
             ctx.fillRect(0, 0, width, height);
 
+            // Update and draw pulses
+            for (let i = pulses.length - 1; i >= 0; i--) {
+                pulses[i].update();
+                pulses[i].draw();
+
+                // Check intersection with nodes to trigger local "healing glow"
+                nodes.forEach(node => {
+                    if (!node.isSevered) {
+                        const dist = Math.hypot(node.x - pulses[i].x, node.y - pulses[i].y);
+                        if (Math.abs(dist - pulses[i].radius) < 15) {
+                            node.pulseEffect = 1.0;
+                        }
+                    }
+                });
+
+                if (pulses[i].alpha <= 0) {
+                    pulses.splice(i, 1);
+                }
+            }
+
+            // Update and filter nodes
             for (let i = nodes.length - 1; i >= 0; i--) {
                 nodes[i].update();
                 if (nodes[i].health <= 0) {
@@ -184,6 +246,7 @@
                 }
             }
 
+            // Draw entanglement bonds with distance gradients
             const maxDistance = 150;
             for (let i = 0; i < nodes.length; i++) {
                 nodes[i].draw();
@@ -195,12 +258,14 @@
                     const dist = Math.sqrt(dx * dx + dy * dy);
 
                     if (dist < maxDistance) {
-                        const alpha = (1 - (dist / maxDistance)).toFixed(2);
+                        const factor = 1 - (dist / maxDistance);
+                        const alpha = Math.pow(factor, 1.5).toFixed(2); // Exponential falloff for realistic field density
+
                         ctx.beginPath();
                         ctx.moveTo(nodes[i].x, nodes[i].y);
                         ctx.lineTo(nodes[j].x, nodes[j].y);
-                        ctx.strokeStyle = `rgba(56, 189, 248, ${alpha * 0.4})`;
-                        ctx.lineWidth = alpha * 1.5;
+                        ctx.strokeStyle = `rgba(56, 189, 248, ${alpha * 0.5})`;
+                        ctx.lineWidth = factor * 2;
                         ctx.stroke();
                     }
                 }
