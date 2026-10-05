@@ -1,19 +1,16 @@
-Here is the updated codebase for v1.8.0, integrating persistent local storage so that the simulation automatically saves and restores topology state across browser sessions.
-HTML
-
 <!--
   ==============================================================
   PROJECT: Holographic Topology Simulator
   FILE: index.html
   CREATOR: Steven Jones
   DATE: 2026-10-05
-  VERSION: 1.8.0
+  VERSION: 1.9.0
   
   DESCRIPTION:
   An interactive client-side simulation exploring emergent holographic network 
-  topologies, local storage persistence, external JSON model import/export for 
-  research workflows, Ryu-Takayanagi entanglement entropy ($S_{EE}$), Integrated 
-  Information ($\Phi$), pseudo-3D spatial depth planes, and dynamic fault recovery mechanics.
+  topologies, harmonic wave interference rings, persistent local storage, 
+  external JSON import/export, Ryu-Takayanagi entanglement entropy ($S_{EE}$), 
+  Integrated Information ($\Phi$), and pseudo-3D spatial depth planes.
   
   ENVIRONMENT & TOOLSTACK:
   - OS: macOS Sequoia (Hackintosh Architecture)
@@ -22,8 +19,9 @@ HTML
   - Dependencies: None (Zero external framework bloat)
   
   CHANGE LOG:
-  - v1.8.0 (2026-10-05): Added persistent localStorage auto-saving and state restoration 
-                         for seamless workspace continuity.
+  - v1.9.0 (2026-10-05): Upgraded fault pulse mechanics into multi-ring harmonic 
+                         wave interference patterns with constructive/destructive superposition.
+  - v1.8.0 (2026-10-05): Added persistent localStorage auto-saving and state restoration.
   - v1.7.0 (2026-10-05): Added external JSON topology import and snapshot export 
                          utilities, plus real-time $S_{EE}$ and $\Phi$ metrics.
   - v1.6.0 (2026-10-05): Added interactive node telemetry HUD drawer and 
@@ -177,7 +175,7 @@ HTML
         <h1>Holographic Topology</h1>
         <p><strong>Left Click Canvas:</strong> Inject Node</p>
         <p><strong>Left Click Node:</strong> Inspect Telemetry</p>
-        <p><strong>Right Click Node:</strong> Sever Node (Fault + Pulse)</p>
+        <p><strong>Right Click Node:</strong> Sever Node (Interference Pulse)</p>
         <p>Network Integrity: <span id="integrityMetric" class="metric">100%</span></p>
         <p>Entanglement S(EE): <span id="entropyMetric" class="metric">0.00</span></p>
         <p>Integrated Info (&Phi;): <span id="phiMetric" class="metric">0.00</span></p>
@@ -251,11 +249,11 @@ HTML
         driftSlider.addEventListener('input', (e) => document.getElementById('valDrift').innerText = e.target.value);
         pulseSlider.addEventListener('input', (e) => document.getElementById('valPulse').innerText = e.target.value);
 
-        const STORAGE_KEY = 'holographic_topology_state_v1.8';
+        const STORAGE_KEY = 'holographic_topology_state_v1.9';
 
         function saveToLocalStorage() {
             const state = {
-                version: "1.8.0",
+                version: "1.9.0",
                 timestamp: new Date().toISOString(),
                 nodes: nodes.map(n => ({
                     id: n.id,
@@ -274,10 +272,9 @@ HTML
             }
         }
 
-        // Export Snapshot Utility
         exportBtn.addEventListener('click', () => {
             const snapshot = {
-                version: "1.8.0",
+                version: "1.9.0",
                 timestamp: new Date().toISOString(),
                 canvas: { width, height },
                 nodes: nodes.map(n => ({
@@ -300,7 +297,6 @@ HTML
             URL.revokeObjectURL(url);
         });
 
-        // Import Model Utility
         importFile.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
@@ -326,35 +322,45 @@ HTML
             initDefaultTopology();
         });
 
-        class Pulse {
+        class HarmonicPulse {
             constructor(x, y) {
                 this.x = x;
                 this.y = y;
-                this.radius = 10;
-                this.alpha = 0.8;
+                this.radius = 5;
+                this.maxRadius = 320;
+                this.alpha = 0.85;
+                // Harmonic sub-rings for interference patterns
+                this.subRings = [0, 22, 45, 70];
             }
 
             update() {
                 this.radius += parseFloat(pulseSlider.value);
-                this.alpha -= 0.015;
+                this.alpha -= 0.008;
             }
 
             draw() {
                 if (this.alpha <= 0) return;
                 const mode = modeSelect.value;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                
-                if (mode === 'fault') {
-                    ctx.strokeStyle = `rgba(239, 68, 68, ${this.alpha})`;
-                } else if (mode === 'bulk') {
-                    ctx.strokeStyle = `rgba(147, 51, 234, ${this.alpha})`;
-                } else {
-                    ctx.strokeStyle = `rgba(56, 189, 248, ${this.alpha})`;
-                }
-                
-                ctx.lineWidth = 2;
-                ctx.stroke();
+
+                this.subRings.forEach((offset, idx) => {
+                    const r = this.radius - (idx * 16);
+                    if (r <= 0 || r > this.maxRadius) return;
+
+                    const ringAlpha = Math.max(0, this.alpha * (1 - (idx * 0.2)));
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+
+                    if (mode === 'fault') {
+                        ctx.strokeStyle = `rgba(239, 68, 68, ${ringAlpha})`;
+                    } else if (mode === 'bulk') {
+                        ctx.strokeStyle = `rgba(147, 51, 234, ${ringAlpha})`;
+                    } else {
+                        ctx.strokeStyle = `rgba(56, 189, 248, ${ringAlpha})`;
+                    }
+
+                    ctx.lineWidth = idx === 0 ? 2.5 : 1.2;
+                    ctx.stroke();
+                });
             }
         }
 
@@ -490,7 +496,6 @@ HTML
             saveToLocalStorage();
         }
 
-        // Initialization from LocalStorage or Default
         const savedStateJSON = localStorage.getItem(STORAGE_KEY);
         if (savedStateJSON) {
             try {
@@ -550,7 +555,7 @@ HTML
 
             if (closest && minDist < 45) {
                 closest.isSevered = true;
-                pulses.push(new Pulse(closest.x, closest.y));
+                pulses.push(new HarmonicPulse(closest.x, closest.y));
                 if (selectedNode === closest) {
                     selectedNode = null;
                     telemetryBox.style.display = 'none';
@@ -558,8 +563,6 @@ HTML
                 saveToLocalStorage();
             }
         });
-
-        let saveThrottleTimer = 0;
 
         function animate() {
             ctx.fillStyle = 'rgba(11, 15, 25, 0.25)';
@@ -574,7 +577,7 @@ HTML
                 nodes.forEach(node => {
                     if (!node.isSevered) {
                         const dist = Math.hypot(node.x - pulses[i].x, node.y - pulses[i].y);
-                        if (Math.abs(dist - pulses[i].radius) < 15) {
+                        if (Math.abs(dist - pulses[i].radius) < 25) {
                             node.pulseEffect = 1.0;
                         }
                     }
