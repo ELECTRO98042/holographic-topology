@@ -1,0 +1,218 @@
+<!--=============================================================
+  PROJECT: Holographic Topology Simulator
+  FILE: index.html
+  CREATOR: Steven Jones
+  DATE: 2026-10-05
+  VERSION: 1.1.0
+  
+  DESCRIPTION:
+  An interactive client-side simulation exploring emergent holographic network 
+  topologies, entanglement weighting, and dynamic fault recovery mechanics 
+  inspired by QFT and Integrated Information Theory (IIT).
+  
+  ENVIRONMENT & TOOLSTACK:
+  - OS: macOS Sequoia (Hackintosh Architecture)
+  - Editor: Visual Studio Code
+  - Runtime: Vanilla HTML5 Canvas & ECMAScript 6 (ES6) JavaScript
+  - Dependencies: None (Zero external framework bloat)
+  
+  CHANGE LOG:
+  - v1.1.0 (2026-10-05): Added right-click fault injection (node severing),
+                         dynamic bond recalculation, and real-time network 
+                         integrity HUD tracking.
+  - v1.0.0 (2026-10-05): Initial canvas prototype, node drifting, and 
+                         distance-threshold entanglement rendering.
+  ==============================================================
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Holographic Topology Simulator</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #0b0f19;
+            color: #e2e8f0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            overflow: hidden;
+            user-select: none;
+        }
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+        .hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            padding: 15px 20px;
+            border-radius: 8px;
+            pointer-events: none;
+            backdrop-filter: blur(8px);
+        }
+        h1 {
+            font-size: 1.1rem;
+            margin: 0 0 5px 0;
+            color: #38bdf8;
+            letter-spacing: 0.05em;
+        }
+        p {
+            margin: 0 0 5px 0;
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+        .metric {
+            color: #38bdf8;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="hud">
+        <h1>Holographic Topology Field</h1>
+        <p><strong>Left Click:</strong> Inject new node</p>
+        <p><strong>Right Click Node:</strong> Sever node (Fault Event)</p>
+        <p>Network Integrity: <span id="integrityMetric" class="metric">100%</span></p>
+    </div>
+
+    <div id="canvas-container">
+        <canvas id="simCanvas"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let width = canvas.width = window.innerWidth;
+        let height = canvas.height = window.innerHeight;
+
+        window.addEventListener('resize', () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        });
+
+        class Node {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 0.8;
+                this.vy = (Math.random() - 0.5) * 0.8;
+                this.radius = 5;
+                this.health = 1.0; 
+                this.isSevered = false;
+            }
+
+            update() {
+                if (this.isSevered) {
+                    this.health -= 0.02;
+                    return;
+                }
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                if (this.x < 50 || this.x > width - 50) this.vx *= -1;
+                if (this.y < 50 || this.y > height - 50) this.vy *= -1;
+            }
+
+            draw() {
+                if (this.health <= 0) return;
+
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                
+                if (this.isSevered) {
+                    ctx.fillStyle = `rgba(239, 68, 68, ${this.health})`; 
+                    ctx.shadowColor = '#ef4444';
+                } else {
+                    ctx.fillStyle = '#38bdf8';
+                    ctx.shadowColor = '#38bdf8';
+                }
+
+                ctx.shadowBlur = 10;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        const nodes = [];
+        const initialNodes = 35;
+        for (let i = 0; i < initialNodes; i++) {
+            nodes.push(new Node(Math.random() * (width - 100) + 50, Math.random() * (height - 100) + 50));
+        }
+
+        window.addEventListener('click', (e) => {
+            if (e.clientX < 280 && e.clientY < 140) return;
+            nodes.push(new Node(e.clientX, e.clientY));
+            if (nodes.length > 60) nodes.shift();
+        });
+
+        window.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            let closest = null;
+            let minDist = Infinity;
+
+            nodes.forEach(node => {
+                const dist = Math.hypot(node.x - e.clientX, node.y - e.clientY);
+                if (dist < minDist) {
+                    minDist = dist;
+                    closest = node;
+                }
+            });
+
+            if (closest && minDist < 40) {
+                closest.isSevered = true;
+            }
+        });
+
+        function animate() {
+            ctx.fillStyle = 'rgba(11, 15, 25, 0.25)';
+            ctx.fillRect(0, 0, width, height);
+
+            for (let i = nodes.length - 1; i >= 0; i--) {
+                nodes[i].update();
+                if (nodes[i].health <= 0) {
+                    nodes.splice(i, 1);
+                }
+            }
+
+            const maxDistance = 150;
+            for (let i = 0; i < nodes.length; i++) {
+                nodes[i].draw();
+                for (let j = i + 1; j < nodes.length; j++) {
+                    if (nodes[i].isSevered || nodes[j].isSevered) continue;
+
+                    const dx = nodes[i].x - nodes[j].x;
+                    const dy = nodes[i].y - nodes[j].y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < maxDistance) {
+                        const alpha = (1 - (dist / maxDistance)).toFixed(2);
+                        ctx.beginPath();
+                        ctx.moveTo(nodes[i].x, nodes[i].y);
+                        ctx.lineTo(nodes[j].x, nodes[j].y);
+                        ctx.strokeStyle = `rgba(56, 189, 248, ${alpha * 0.4})`;
+                        ctx.lineWidth = alpha * 1.5;
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            const integrity = nodes.length > 0 ? Math.round((nodes.filter(n => !n.isSevered).length / initialNodes) * 100) : 0;
+            document.getElementById('integrityMetric').innerText = `${Math.min(integrity, 100)}%`;
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
