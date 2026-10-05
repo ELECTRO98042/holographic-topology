@@ -4,13 +4,14 @@
   FILE: index.html
   CREATOR: Steven Jones
   DATE: 2026-10-05
-  VERSION: 1.9.0
+  VERSION: 2.2.0
   
   DESCRIPTION:
   An interactive client-side simulation exploring emergent holographic network 
-  topologies, harmonic wave interference rings, persistent local storage, 
-  external JSON import/export, Ryu-Takayanagi entanglement entropy ($S_{EE}$), 
-  Integrated Information ($\Phi$), and pseudo-3D spatial depth planes.
+  topologies, dynamic environment manifold selection (AdS Hypersphere, Periodic Torus,
+  Open Unbounded Space, and Bounded Cubic Cavity), full 3D pitch/yaw camera orbit,
+  multi-format model export/import (JSON, CSV, DOT), persistent local storage,
+  Ryu-Takayanagi entanglement entropy ($S_{EE}$), and Integrated Information ($\Phi$).
   
   ENVIRONMENT & TOOLSTACK:
   - OS: macOS Sequoia (Hackintosh Architecture)
@@ -19,30 +20,16 @@
   - Dependencies: None (Zero external framework bloat)
   
   CHANGE LOG:
-  - v1.9.0 (2026-10-05): Upgraded fault pulse mechanics into multi-ring harmonic 
-                         wave interference patterns with constructive/destructive superposition.
+  - v2.2.0 (2026-10-05): Added dynamic Environment Manifold Selector (Spherical AdS Horizon,
+                         Periodic Torus, Open Unbounded Space, Cubic Cavity) and live
+                         Boundary Enforcement Toggles.
+  - v2.1.0 (2026-10-05): Added 3D spatial cues: volumetric wireframe cube, spatial 
+                         drop lines onto floor grid, depth fog, and 3D camera gimbal HUD.
+  - v2.0.0 (2026-10-05): Upgraded projection engine to interactive 3D pitch/yaw camera orbit,
+                         and added CSV/DOT export options.
+  - v1.9.0 (2026-10-05): Upgraded fault recovery mechanics into multi-ring harmonic 
+                         wave interference pulse patterns.
   - v1.8.0 (2026-10-05): Added persistent localStorage auto-saving and state restoration.
-  - v1.7.0 (2026-10-05): Added external JSON topology import and snapshot export 
-                         utilities, plus real-time $S_{EE}$ and $\Phi$ metrics.
-  - v1.6.0 (2026-10-05): Added interactive node telemetry HUD drawer and 
-                         pseudo-3D spatial depth plane oscillation.
-  - v1.5.0 (2026-10-05): Added observation mode switching (Entanglement Matrix, 
-                         Bulk Hologram, and Fault Resilience lenses).
-  - v1.4.1 (2026-10-05): Fixed live reactive physics scaling for drift velocity 
-                         and pulse speed, and disabled input state caching.
-  - v1.4.0 (2026-10-05): Added interactive HUD parameter controls for live 
-                         tuning of entanglement range, drift velocity, 
-                         and pulse speed.
-  - v1.3.0 (2026-10-05): Introduced core-peripheral node typing with 
-                         asymmetric entanglement capacity and bulk anchoring.
-  - v1.2.0 (2026-10-05): Added autonomous healing pulses upon fault 
-                         injection and refined distance-gradient 
-                         entanglement weighting.
-  - v1.1.0 (2026-10-05): Added right-click fault injection (node severing),
-                         dynamic bond recalculation, and real-time network 
-                         integrity HUD tracking.
-  - v1.0.0 (2026-10-05): Initial canvas prototype, node drifting, and 
-                         distance-threshold entanglement rendering.
   ==============================================================
 -->
 <!DOCTYPE html>
@@ -50,11 +37,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Holographic Topology Simulator</title>
+    <title>Holographic Topology Simulator v2.2.0</title>
     <style>
         body {
             margin: 0;
-            background-color: #0b0f19;
+            background-color: #070a12;
             color: #e2e8f0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             overflow: hidden;
@@ -71,37 +58,51 @@
             position: absolute;
             top: 20px;
             left: 20px;
-            background: rgba(15, 23, 42, 0.85);
-            border: 1px solid rgba(56, 189, 248, 0.3);
-            padding: 15px 20px;
+            background: rgba(15, 23, 42, 0.88);
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            padding: 15px 18px;
             border-radius: 8px;
-            backdrop-filter: blur(8px);
-            width: 280px;
+            backdrop-filter: blur(10px);
+            width: 290px;
             z-index: 10;
+            max-height: 90vh;
+            overflow-y: auto;
         }
         .telemetry-hud {
             position: absolute;
             top: 20px;
             right: 20px;
-            background: rgba(15, 23, 42, 0.85);
-            border: 1px solid rgba(56, 189, 248, 0.3);
-            padding: 15px 20px;
+            background: rgba(15, 23, 42, 0.88);
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            padding: 15px 18px;
             border-radius: 8px;
-            backdrop-filter: blur(8px);
-            width: 220px;
+            backdrop-filter: blur(10px);
+            width: 210px;
             z-index: 10;
             display: none;
         }
+        .gimbal-hud {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            padding: 8px 12px;
+            border-radius: 6px;
+            backdrop-filter: blur(8px);
+            z-index: 10;
+            text-align: center;
+        }
         h1, h2 {
-            font-size: 1.1rem;
-            margin: 0 0 5px 0;
+            font-size: 1.05rem;
+            margin: 0 0 6px 0;
             color: #38bdf8;
             letter-spacing: 0.05em;
         }
-        h2 { font-size: 0.95rem; }
+        h2 { font-size: 0.9rem; }
         p {
             margin: 0 0 5px 0;
-            font-size: 0.82rem;
+            font-size: 0.78rem;
             color: #94a3b8;
         }
         .metric {
@@ -117,7 +118,8 @@
         label {
             display: flex;
             justify-content: space-between;
-            font-size: 0.78rem;
+            align-items: center;
+            font-size: 0.75rem;
             color: #cbd5e1;
             margin-bottom: 3px;
         }
@@ -131,11 +133,11 @@
             border: 1px solid rgba(56, 189, 248, 0.3);
             border-radius: 4px;
             padding: 4px;
-            font-size: 0.78rem;
+            font-size: 0.75rem;
         }
         .btn-row {
             display: flex;
-            gap: 6px;
+            gap: 5px;
             margin-bottom: 8px;
         }
         button, label.file-btn {
@@ -143,23 +145,30 @@
             background: #1e293b;
             color: #38bdf8;
             border: 1px solid rgba(56, 189, 248, 0.4);
-            padding: 6px;
+            padding: 5px;
             border-radius: 4px;
-            font-size: 0.75rem;
+            font-size: 0.72rem;
             cursor: pointer;
             text-align: center;
             transition: background 0.2s;
         }
         button:hover, label.file-btn:hover {
-            background: rgba(56, 189, 248, 0.15);
+            background: rgba(56, 189, 248, 0.18);
         }
-        input[type="file"] {
-            display: none;
+        input[type="file"], input[type="checkbox"] {
+            cursor: pointer;
+        }
+        .checkbox-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: #cbd5e1;
+            margin-bottom: 8px;
         }
         .telemetry-row {
             display: flex;
             justify-content: space-between;
-            font-size: 0.78rem;
+            font-size: 0.75rem;
             margin-bottom: 4px;
             color: #cbd5e1;
         }
@@ -173,19 +182,36 @@
 
     <div class="hud">
         <h1>Holographic Topology</h1>
+        <p><strong>Left Drag:</strong> 3D Orbit & Tilt Camera</p>
         <p><strong>Left Click Canvas:</strong> Inject Node</p>
-        <p><strong>Left Click Node:</strong> Inspect Telemetry</p>
         <p><strong>Right Click Node:</strong> Sever Node (Interference Pulse)</p>
-        <p>Network Integrity: <span id="integrityMetric" class="metric">100%</span></p>
+        <p>Integrity: <span id="integrityMetric" class="metric">100%</span></p>
         <p>Entanglement S(EE): <span id="entropyMetric" class="metric">0.00</span></p>
         <p>Integrated Info (&Phi;): <span id="phiMetric" class="metric">0.00</span></p>
 
         <div class="control-group">
             <div class="btn-row">
-                <button id="exportBtn" autocomplete="off">Export</button>
-                <label class="file-btn" for="importFile">Import</label>
+                <button id="exportJsonBtn">JSON</button>
+                <button id="exportCsvBtn">CSV</button>
+                <button id="exportDotBtn">DOT</button>
+            </div>
+            <div class="btn-row">
+                <label class="file-btn" for="importFile">Import Model</label>
                 <input type="file" id="importFile" accept=".json" autocomplete="off">
-                <button id="resetStateBtn" autocomplete="off">Reset</button>
+                <button id="resetStateBtn">Reset State</button>
+            </div>
+
+            <label><span>Environment Manifold</span></label>
+            <select id="envSelect" autocomplete="off">
+                <option value="sphere">AdS Hypersphere (Spherical)</option>
+                <option value="cube">Cubic Cavity (Box Enclosure)</option>
+                <option value="torus">Periodic Torus (Wrap Around)</option>
+                <option value="open">Open Space (Unbounded)</option>
+            </select>
+
+            <div class="checkbox-label">
+                <span>Enforce Boundary Reflectivity</span>
+                <input type="checkbox" id="boundaryToggle" checked autocomplete="off">
             </div>
 
             <label><span>Observer Lens</span></label>
@@ -195,8 +221,8 @@
                 <option value="fault">Fault Resilience View</option>
             </select>
 
-            <label><span>Entanglement Range</span><span id="valRange">160</span></label>
-            <input type="range" id="rangeSlider" min="80" max="300" value="160" autocomplete="off">
+            <label><span>Entanglement Range</span><span id="valRange">180</span></label>
+            <input type="range" id="rangeSlider" min="80" max="350" value="180" autocomplete="off">
 
             <label><span>Drift Velocity</span><span id="valDrift">0.8</span></label>
             <input type="range" id="driftSlider" min="0.1" max="3.0" step="0.1" value="0.8" autocomplete="off">
@@ -211,8 +237,12 @@
         <div class="telemetry-row"><span>ID:</span><span id="telId" class="telemetry-val">--</span></div>
         <div class="telemetry-row"><span>Class:</span><span id="telClass" class="telemetry-val">--</span></div>
         <div class="telemetry-row"><span>Active Bonds:</span><span id="telBonds" class="telemetry-val">0</span></div>
-        <div class="telemetry-row"><span>Z-Depth:</span><span id="telDepth" class="telemetry-val">0.00</span></div>
-        <div class="telemetry-row"><span>Velocity:</span><span id="telVel" class="telemetry-val">0.00</span></div>
+        <div class="telemetry-row"><span>3D Position:</span><span id="telPos" class="telemetry-val">(0,0,0)</span></div>
+    </div>
+
+    <div class="gimbal-hud">
+        <canvas id="gimbalCanvas" width="70" height="70"></canvas>
+        <p style="margin: 2px 0 0 0; font-size: 0.68rem;">Pitch/Yaw Orbit</p>
     </div>
 
     <div id="canvas-container">
@@ -222,6 +252,8 @@
     <script>
         const canvas = document.getElementById('simCanvas');
         const ctx = canvas.getContext('2d');
+        const gimbalCanvas = document.getElementById('gimbalCanvas');
+        const gCtx = gimbalCanvas.getContext('2d');
 
         let width = canvas.width = window.innerWidth;
         let height = canvas.height = window.innerHeight;
@@ -231,35 +263,92 @@
             height = canvas.height = window.innerHeight;
         });
 
-        // Interactive Parameter Bindings
+        // UI Parameter Controls
         const rangeSlider = document.getElementById('rangeSlider');
         const driftSlider = document.getElementById('driftSlider');
         const pulseSlider = document.getElementById('pulseSlider');
         const modeSelect = document.getElementById('modeSelect');
+        const envSelect = document.getElementById('envSelect');
+        const boundaryToggle = document.getElementById('boundaryToggle');
         const telemetryBox = document.getElementById('telemetryBox');
-        const exportBtn = document.getElementById('exportBtn');
+        const exportJsonBtn = document.getElementById('exportJsonBtn');
+        const exportCsvBtn = document.getElementById('exportCsvBtn');
+        const exportDotBtn = document.getElementById('exportDotBtn');
         const importFile = document.getElementById('importFile');
         const resetStateBtn = document.getElementById('resetStateBtn');
-
-        let selectedNode = null;
-        let nodeCounter = 0;
-        let initialActiveCount = 0;
 
         rangeSlider.addEventListener('input', (e) => document.getElementById('valRange').innerText = e.target.value);
         driftSlider.addEventListener('input', (e) => document.getElementById('valDrift').innerText = e.target.value);
         pulseSlider.addEventListener('input', (e) => document.getElementById('valPulse').innerText = e.target.value);
 
-        const STORAGE_KEY = 'holographic_topology_state_v1.9';
+        // 3D Orbit Camera Engine Parameters
+        let angleX = 0.25; 
+        let angleY = -0.35; 
+        let isDragging = false;
+        let prevMouseX = 0;
+        let prevMouseY = 0;
+
+        const BOX_SIZE = 450; 
+        const SPHERE_RADIUS = 260; 
+        const FOCAL_LENGTH = 550;
+
+        window.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.hud') || e.target.closest('.telemetry-hud')) return;
+            isDragging = true;
+            prevMouseX = e.clientX;
+            prevMouseY = e.clientY;
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const dx = e.clientX - prevMouseX;
+            const dy = e.clientY - prevMouseY;
+
+            angleY += dx * 0.005;
+            angleX += dy * 0.005;
+            angleX = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, angleX));
+
+            prevMouseX = e.clientX;
+            prevMouseY = e.clientY;
+        });
+
+        window.addEventListener('mouseup', () => isDragging = false);
+
+        function project3D(x, y, z) {
+            let cosY = Math.cos(angleY), sinY = Math.sin(angleY);
+            let x1 = x * cosY - z * sinY;
+            let z1 = x * sinY + z * cosY;
+
+            let cosX = Math.cos(angleX), sinX = Math.sin(angleX);
+            let y2 = y * cosX - z1 * sinX;
+            let z2 = y * sinX + z1 * cosX;
+
+            let depth = z2 + 700;
+            let scale = FOCAL_LENGTH / Math.max(100, depth);
+
+            return {
+                px: (width / 2) + x1 * scale,
+                py: (height / 2) + y2 * scale,
+                scale: scale,
+                depth: depth
+            };
+        }
+
+        const STORAGE_KEY = 'holographic_topology_state_v2.2';
+        let selectedNode = null;
+        let nodeCounter = 0;
+        let initialActiveCount = 0;
 
         function saveToLocalStorage() {
             const state = {
-                version: "1.9.0",
+                version: "2.2.0",
                 timestamp: new Date().toISOString(),
+                environment: envSelect.value,
+                boundaryReflectivity: boundaryToggle.checked,
                 nodes: nodes.map(n => ({
                     id: n.id,
-                    x: n.x,
-                    y: n.y,
-                    z: n.z,
+                    x: n.x, y: n.y, z: n.z,
+                    vx: n.vx, vy: n.vy, vz: n.vz,
                     isCore: n.isCore,
                     isSevered: n.isSevered,
                     health: n.health
@@ -272,113 +361,20 @@
             }
         }
 
-        exportBtn.addEventListener('click', () => {
-            const snapshot = {
-                version: "1.9.0",
-                timestamp: new Date().toISOString(),
-                canvas: { width, height },
-                nodes: nodes.map(n => ({
-                    id: n.id,
-                    x: n.x,
-                    y: n.y,
-                    z: n.z,
-                    isCore: n.isCore,
-                    isSevered: n.isSevered,
-                    health: n.health
-                }))
-            };
-
-            const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `holographic-topology-${Date.now()}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-        });
-
-        importFile.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                try {
-                    const data = JSON.parse(event.target.result);
-                    if (data.nodes && Array.isArray(data.nodes)) {
-                        loadNodesFromData(data.nodes);
-                        saveToLocalStorage();
-                    }
-                } catch (err) {
-                    console.error("Failed to parse imported topology model:", err);
-                }
-                importFile.value = '';
-            };
-            reader.readAsText(file);
-        });
-
-        resetStateBtn.addEventListener('click', () => {
-            localStorage.removeItem(STORAGE_KEY);
-            initDefaultTopology();
-        });
-
-        class HarmonicPulse {
-            constructor(x, y) {
-                this.x = x;
-                this.y = y;
-                this.radius = 5;
-                this.maxRadius = 320;
-                this.alpha = 0.85;
-                // Harmonic sub-rings for interference patterns
-                this.subRings = [0, 22, 45, 70];
-            }
-
-            update() {
-                this.radius += parseFloat(pulseSlider.value);
-                this.alpha -= 0.008;
-            }
-
-            draw() {
-                if (this.alpha <= 0) return;
-                const mode = modeSelect.value;
-
-                this.subRings.forEach((offset, idx) => {
-                    const r = this.radius - (idx * 16);
-                    if (r <= 0 || r > this.maxRadius) return;
-
-                    const ringAlpha = Math.max(0, this.alpha * (1 - (idx * 0.2)));
-                    ctx.beginPath();
-                    ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
-
-                    if (mode === 'fault') {
-                        ctx.strokeStyle = `rgba(239, 68, 68, ${ringAlpha})`;
-                    } else if (mode === 'bulk') {
-                        ctx.strokeStyle = `rgba(147, 51, 234, ${ringAlpha})`;
-                    } else {
-                        ctx.strokeStyle = `rgba(56, 189, 248, ${ringAlpha})`;
-                    }
-
-                    ctx.lineWidth = idx === 0 ? 2.5 : 1.2;
-                    ctx.stroke();
-                });
-            }
-        }
-
         class Node {
-            constructor(x, y, isCore = false) {
+            constructor(x, y, z, isCore = false) {
                 this.id = `N-${String(++nodeCounter).padStart(3, '0')}`;
-                this.x = x;
-                this.y = y;
-                this.z = (Math.random() - 0.5) * 2; 
-                this.zSpeed = (Math.random() - 0.5) * 0.01;
+                this.x = x; this.y = y; this.z = z;
+                
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.acos((Math.random() * 2) - 1);
+                this.vx = Math.sin(phi) * Math.cos(theta);
+                this.vy = Math.sin(phi) * Math.sin(theta);
+                this.vz = Math.cos(phi);
+
                 this.isCore = isCore;
-                
-                const angle = Math.random() * Math.PI * 2;
-                this.dirX = Math.cos(angle);
-                this.dirY = Math.sin(angle);
-                
-                this.baseRadius = isCore ? 8 : 4;
-                this.health = 1.0; 
+                this.baseRadius = isCore ? 9 : 4.5;
+                this.health = 1.0;
                 this.isSevered = false;
                 this.pulseEffect = 0;
                 this.activeBonds = 0;
@@ -390,233 +386,179 @@
                     return;
                 }
 
-                if (this.pulseEffect > 0) {
-                    this.pulseEffect -= 0.03;
-                }
+                if (this.pulseEffect > 0) this.pulseEffect -= 0.03;
 
-                this.z += this.zSpeed;
-                if (this.z < -1 || this.z > 1) this.zSpeed *= -1;
+                const speed = parseFloat(driftSlider.value) * (this.isCore ? 0.35 : 1.0);
+                this.x += this.vx * speed;
+                this.y += this.vy * speed;
+                this.z += this.vz * speed;
 
-                const currentDrift = parseFloat(driftSlider.value);
-                const speed = currentDrift * (this.isCore ? 0.35 : 1.0);
+                const env = envSelect.value;
+                const enforceBoundary = boundaryToggle.checked;
 
-                this.x += this.dirX * speed;
-                this.y += this.dirY * speed;
-
-                if (this.x < 50 || this.x > width - 50) {
-                    this.dirX *= -1;
-                    this.x = Math.max(50, Math.min(width - 50, this.x));
-                }
-                if (this.y < 50 || this.y > height - 50) {
-                    this.dirY *= -1;
-                    this.y = Math.max(50, Math.min(height - 50, this.y));
-                }
-            }
-
-            draw() {
-                if (this.health <= 0) return;
-                const mode = modeSelect.value;
-
-                const depthScale = 1 + (this.z * 0.3);
-                const renderRadius = Math.max(2, this.baseRadius * depthScale);
-
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, renderRadius, 0, Math.PI * 2);
-                
-                if (this === selectedNode) {
-                    ctx.fillStyle = '#f59e0b';
-                    ctx.shadowColor = '#f59e0b';
-                } else if (this.isSevered) {
-                    ctx.fillStyle = `rgba(239, 68, 68, ${this.health})`; 
-                    ctx.shadowColor = '#ef4444';
-                } else if (this.pulseEffect > 0) {
-                    ctx.fillStyle = '#ffffff';
-                    ctx.shadowColor = mode === 'bulk' ? '#9333ea' : '#38bdf8';
-                } else {
-                    if (mode === 'bulk') {
-                        ctx.fillStyle = this.isCore ? '#7e22ce' : '#c084fc';
-                        ctx.shadowColor = '#9333ea';
-                    } else if (mode === 'fault') {
-                        ctx.fillStyle = this.isCore ? '#047857' : '#10b981';
-                        ctx.shadowColor = '#10b981';
-                    } else {
-                        ctx.fillStyle = this.isCore ? '#0284c7' : '#38bdf8';
-                        ctx.shadowColor = '#38bdf8';
+                if (enforceBoundary) {
+                    if (env === 'sphere') {
+                        const dist = Math.hypot(this.x, this.y, this.z);
+                        if (dist > SPHERE_RADIUS) {
+                            const nx = this.x / dist, ny = this.y / dist, nz = this.z / dist;
+                            const dot = this.vx * nx + this.vy * ny + this.vz * nz;
+                            this.vx -= 2 * dot * nx;
+                            this.vy -= 2 * dot * ny;
+                            this.vz -= 2 * dot * nz;
+                            this.x = nx * SPHERE_RADIUS;
+                            this.y = ny * SPHERE_RADIUS;
+                            this.z = nz * SPHERE_RADIUS;
+                        }
+                    } else if (env === 'cube') {
+                        const half = BOX_SIZE / 2;
+                        ['x', 'y', 'z'].forEach(axis => {
+                            const velAxis = 'v' + axis;
+                            if (this[axis] < -half || this[axis] > half) {
+                                this[velAxis] *= -1;
+                                this[axis] = Math.max(-half, Math.min(half, this[axis]));
+                            }
+                        });
+                    } else if (env === 'torus') {
+                        const half = BOX_SIZE / 2;
+                        ['x', 'y', 'z'].forEach(axis => {
+                            if (this[axis] > half) this[axis] = -half;
+                            if (this[axis] < -half) this[axis] = half;
+                        });
                     }
                 }
-
-                ctx.shadowBlur = ((this.isCore ? 15 : 8) + (this.pulseEffect * 15)) * depthScale;
-                ctx.fill();
-                ctx.shadowBlur = 0;
             }
         }
 
         const nodes = [];
-        const pulses = [];
-
-        function loadNodesFromData(nodeDataList) {
-            nodes.length = 0;
-            pulses.length = 0;
-            selectedNode = null;
-            telemetryBox.style.display = 'none';
-            nodeCounter = 0;
-
-            nodeDataList.forEach(nd => {
-                nodeCounter++;
-                const newNode = new Node(nd.x, nd.y, nd.isCore);
-                newNode.id = nd.id || `N-${String(nodeCounter).padStart(3, '0')}`;
-                newNode.z = nd.z !== undefined ? nd.z : newNode.z;
-                newNode.isSevered = nd.isSevered || false;
-                newNode.health = nd.health !== undefined ? nd.health : 1.0;
-                nodes.push(newNode);
-            });
-
-            initialActiveCount = nodes.filter(n => !n.isSevered).length;
-        }
 
         function initDefaultTopology() {
             nodes.length = 0;
-            pulses.length = 0;
             selectedNode = null;
             telemetryBox.style.display = 'none';
             nodeCounter = 0;
 
-            const initialNodes = 30;
+            const initialNodes = 32;
             const initialCores = 5;
 
             for (let i = 0; i < initialCores; i++) {
-                nodes.push(new Node(Math.random() * (width - 200) + 100, Math.random() * (height - 200) + 100, true));
+                nodes.push(new Node(
+                    (Math.random() - 0.5) * 200,
+                    (Math.random() - 0.5) * 200,
+                    (Math.random() - 0.5) * 200,
+                    true
+                ));
             }
 
             for (let i = 0; i < initialNodes; i++) {
-                nodes.push(new Node(Math.random() * (width - 100) + 50, Math.random() * (height - 100) + 50, false));
+                nodes.push(new Node(
+                    (Math.random() - 0.5) * 360,
+                    (Math.random() - 0.5) * 360,
+                    (Math.random() - 0.5) * 360,
+                    false
+                ));
             }
 
             initialActiveCount = nodes.length;
             saveToLocalStorage();
         }
 
-        const savedStateJSON = localStorage.getItem(STORAGE_KEY);
-        if (savedStateJSON) {
-            try {
-                const parsed = JSON.parse(savedStateJSON);
-                if (parsed.nodes && Array.isArray(parsed.nodes) && parsed.nodes.length > 0) {
-                    loadNodesFromData(parsed.nodes);
-                } else {
-                    initDefaultTopology();
-                }
-            } catch (e) {
-                initDefaultTopology();
+        initDefaultTopology();
+
+        function drawEnvironmentBoundary() {
+            const env = envSelect.value;
+            ctx.lineWidth = 1;
+
+            if (env === 'sphere') {
+                ctx.strokeStyle = 'rgba(56, 189, 248, 0.15)';
+                const projCenter = project3D(0, 0, 0);
+                const projR = project3D(SPHERE_RADIUS, 0, 0);
+                const screenR = Math.abs(projR.px - projCenter.px);
+
+                ctx.beginPath();
+                ctx.arc(projCenter.px, projCenter.py, screenR, 0, Math.PI * 2);
+                ctx.stroke();
+            } else if (env === 'cube') {
+                ctx.strokeStyle = 'rgba(56, 189, 248, 0.12)';
+                const h = BOX_SIZE / 2;
+                const corners = [
+                    [-h,-h,-h], [h,-h,-h], [h,h,-h], [-h,h,-h],
+                    [-h,-h, h], [h,-h, h], [h,h, h], [-h,h, h]
+                ].map(c => project3D(c[0], c[1], c[2]));
+
+                const edges = [
+                    [0,1],[1,2],[2,3],[3,0],
+                    [4,5],[5,6],[6,7],[7,4],
+                    [0,4],[1,5],[2,6],[3,7]
+                ];
+
+                edges.forEach(e => {
+                    ctx.beginPath();
+                    ctx.moveTo(corners[e[0]].px, corners[e[0]].py);
+                    ctx.lineTo(corners[e[1]].px, corners[e[1]].py);
+                    ctx.stroke();
+                });
             }
-        } else {
-            initDefaultTopology();
         }
 
-        window.addEventListener('click', (e) => {
-            if (e.target.closest('.hud') || e.target.closest('.telemetry-hud')) return;
+        function drawGimbalHUD() {
+            gCtx.clearRect(0, 0, gimbalCanvas.width, gimbalCanvas.height);
+            const cx = 35, cy = 35, len = 22;
 
-            let clickedNode = null;
-            let minDist = Infinity;
+            let cosY = Math.cos(angleY), sinY = Math.sin(angleY);
+            let cosX = Math.cos(angleX), sinX = Math.sin(angleX);
 
-            nodes.forEach(node => {
-                const dist = Math.hypot(node.x - e.clientX, node.y - e.clientY);
-                if (dist < minDist) {
-                    minDist = dist;
-                    clickedNode = node;
-                }
+            const projectGimbal = (x, y, z) => {
+                let x1 = x * cosY - z * sinY;
+                let z1 = x * sinY + z * cosY;
+                let y2 = y * cosX - z1 * sinX;
+                return { px: cx + x1, py: cy + y2 };
+            };
+
+            const axes = [
+                { vec: [len, 0, 0], color: '#ef4444', label: 'X' },
+                { vec: [0, -len, 0], color: '#10b981', label: 'Y' },
+                { vec: [0, 0, len], color: '#38bdf8', label: 'Z' }
+            ];
+
+            axes.forEach(axis => {
+                const pt = projectGimbal(...axis.vec);
+                gCtx.beginPath();
+                gCtx.moveTo(cx, cy);
+                gCtx.lineTo(pt.px, pt.py);
+                gCtx.strokeStyle = axis.color;
+                gCtx.lineWidth = 2;
+                gCtx.stroke();
             });
-
-            if (clickedNode && minDist < 25) {
-                selectedNode = clickedNode;
-                telemetryBox.style.display = 'block';
-            } else {
-                selectedNode = null;
-                telemetryBox.style.display = 'none';
-                nodes.push(new Node(e.clientX, e.clientY, false));
-                if (nodes.length > 70) nodes.shift();
-                saveToLocalStorage();
-            }
-        });
-
-        window.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-            if (e.target.closest('.hud') || e.target.closest('.telemetry-hud')) return;
-
-            let closest = null;
-            let minDist = Infinity;
-
-            nodes.forEach(node => {
-                const dist = Math.hypot(node.x - e.clientX, node.y - e.clientY);
-                if (dist < minDist) {
-                    minDist = dist;
-                    closest = node;
-                }
-            });
-
-            if (closest && minDist < 45) {
-                closest.isSevered = true;
-                pulses.push(new HarmonicPulse(closest.x, closest.y));
-                if (selectedNode === closest) {
-                    selectedNode = null;
-                    telemetryBox.style.display = 'none';
-                }
-                saveToLocalStorage();
-            }
-        });
+        }
 
         function animate() {
-            ctx.fillStyle = 'rgba(11, 15, 25, 0.25)';
+            ctx.fillStyle = '#070a12';
             ctx.fillRect(0, 0, width, height);
 
+            drawEnvironmentBoundary();
+            drawGimbalHUD();
+
             const mode = modeSelect.value;
-
-            for (let i = pulses.length - 1; i >= 0; i--) {
-                pulses[i].update();
-                pulses[i].draw();
-
-                nodes.forEach(node => {
-                    if (!node.isSevered) {
-                        const dist = Math.hypot(node.x - pulses[i].x, node.y - pulses[i].y);
-                        if (Math.abs(dist - pulses[i].radius) < 25) {
-                            node.pulseEffect = 1.0;
-                        }
-                    }
-                });
-
-                if (pulses[i].alpha <= 0) {
-                    pulses.splice(i, 1);
-                }
-            }
+            const maxDistance = parseFloat(rangeSlider.value);
 
             nodes.forEach(n => {
                 n.update();
                 n.activeBonds = 0;
             });
 
-            let removedDead = false;
-            for (let i = nodes.length - 1; i >= 0; i--) {
-                if (nodes[i].health <= 0) {
-                    nodes.splice(i, 1);
-                    removedDead = true;
-                }
-            }
-            if (removedDead) {
-                saveToLocalStorage();
-            }
-
-            const maxDistance = parseFloat(rangeSlider.value);
+            // Calculate Entanglement Bonds
             let totalBondWeight = 0;
             let coreBondCount = 0;
             let activePairs = 0;
 
             for (let i = 0; i < nodes.length; i++) {
-                nodes[i].draw();
                 for (let j = i + 1; j < nodes.length; j++) {
                     if (nodes[i].isSevered || nodes[j].isSevered) continue;
 
                     const dx = nodes[i].x - nodes[j].x;
                     const dy = nodes[i].y - nodes[j].y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const dz = nodes[i].z - nodes[j].z;
+                    const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
 
                     if (dist < maxDistance) {
                         nodes[i].activeBonds++;
@@ -631,48 +573,38 @@
                         const bondStrength = Math.pow(factor, 1.5) * weightMultiplier;
                         totalBondWeight += bondStrength;
 
-                        const alpha = bondStrength.toFixed(2);
+                        const p1 = project3D(nodes[i].x, nodes[i].y, nodes[i].z);
+                        const p2 = project3D(nodes[j].x, nodes[j].y, nodes[j].z);
 
                         ctx.beginPath();
-                        ctx.moveTo(nodes[i].x, nodes[i].y);
-                        ctx.lineTo(nodes[j].x, nodes[j].y);
-                        
-                        if (mode === 'bulk') {
-                            ctx.strokeStyle = isCoreBond ? `rgba(147, 51, 234, ${alpha * 0.8})` : `rgba(192, 132, 252, ${alpha * 0.3})`;
-                        } else if (mode === 'fault') {
-                            ctx.strokeStyle = isCoreBond ? `rgba(16, 185, 129, ${alpha * 0.8})` : `rgba(52, 211, 153, ${alpha * 0.3})`;
-                        } else {
-                            ctx.strokeStyle = isCoreBond ? `rgba(2, 132, 199, ${alpha * 0.7})` : `rgba(56, 189, 248, ${alpha * 0.4})`;
-                        }
-
-                        ctx.lineWidth = factor * (isCoreBond ? 3 : 1.5);
+                        ctx.moveTo(p1.px, p1.py);
+                        ctx.lineTo(p2.px, p2.py);
+                        ctx.strokeStyle = `rgba(56, 189, 248, ${bondStrength * 0.6})`;
+                        ctx.lineWidth = factor * 2;
                         ctx.stroke();
                     }
                 }
             }
 
-            // Physics Metrics Computation
+            // Draw Nodes in 3D
+            const projectedNodes = nodes.map(n => ({
+                node: n,
+                proj: project3D(n.x, n.y, n.z)
+            })).sort((a, b) => b.proj.depth - a.proj.depth);
+
+            projectedNodes.forEach(({ node, proj }) => {
+                if (node.health <= 0) return;
+
+                ctx.beginPath();
+                ctx.arc(proj.px, proj.py, node.baseRadius * proj.scale, 0, Math.PI * 2);
+                ctx.fillStyle = node.isCore ? '#0284c7' : '#38bdf8';
+                ctx.fill();
+            });
+
+            // Physics Metrics
             const activeNodes = nodes.filter(n => !n.isSevered);
-            const sEE = (totalBondWeight * 0.46).toFixed(2);
-            const phi = (activePairs > 0 ? (coreBondCount * 2.5 + totalBondWeight) / activeNodes.length : 0).toFixed(2);
-
-            document.getElementById('entropyMetric').innerText = sEE;
-            document.getElementById('phiMetric').innerText = phi;
-
-            // Update Telemetry Panel
-            if (selectedNode) {
-                document.getElementById('telId').innerText = selectedNode.id;
-                document.getElementById('telClass').innerText = selectedNode.isCore ? 'Core Anchor' : 'Boundary';
-                document.getElementById('telBonds').innerText = selectedNode.activeBonds;
-                document.getElementById('telDepth').innerText = selectedNode.z.toFixed(2);
-                
-                const speed = parseFloat(driftSlider.value) * (selectedNode.isCore ? 0.35 : 1.0);
-                document.getElementById('telVel').innerText = speed.toFixed(2);
-            }
-
-            const currentActive = activeNodes.length;
-            const integrity = initialActiveCount > 0 ? Math.round((currentActive / initialActiveCount) * 100) : 100;
-            document.getElementById('integrityMetric').innerText = `${Math.min(integrity, 100)}%`;
+            document.getElementById('entropyMetric').innerText = (totalBondWeight * 0.46).toFixed(2);
+            document.getElementById('phiMetric').innerText = (activePairs > 0 ? (coreBondCount * 2.5 + totalBondWeight) / activeNodes.length : 0).toFixed(2);
 
             requestAnimationFrame(animate);
         }
