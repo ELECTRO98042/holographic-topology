@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Holographic Telemetry Monitor</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 16px;
+            background-color: #070a12;
+            color: #e2e8f0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            overflow: hidden;
+            user-select: none;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(56, 189, 248, 0.25);
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+        }
+        h1 {
+            font-size: 0.95rem;
+            color: #38bdf8;
+            margin: 0;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        .status-tag {
+            font-size: 0.7rem;
+            color: #10b981;
+            font-family: monospace;
+        }
+        canvas {
+            width: 100%;
+            height: calc(100vh - 70px);
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 6px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Real-Time Telemetry Feed</h1>
+        <span id="status" class="status-tag">● STREAMING</span>
+    </div>
+    
+    <canvas id="popoutChartCanvas"></canvas>
+
+    <script type="module">
+    import { TelemetryService } from './js/TelemetryService.js';
+
+    // 1. Instantiate Telemetry Service
+    const telemetry = new TelemetryService();
+
+    // 2. Setup Canvas & Window Listeners Once at Startup
+    const canvas = document.getElementById('popoutChartCanvas');
+    const ctx = canvas.getContext('2d');
+    const statusEl = document.getElementById('statusIndicator');
+
+    function resizeCanvas() {
+        if (canvas) {
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+        }
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // 3. FIFO Buffer & Chart Renderer Setup
+    const history = [];
+    const MAX_SAMPLES = 150;
+
+    function renderChart() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (history.length < 2) return;
+
+        // Oscilloscope line rendering for S_EE (Entanglement Entropy)
+        ctx.beginPath();
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 2;
+
+        const step = canvas.width / (MAX_SAMPLES - 1);
+        history.forEach((sample, i) => {
+            const x = i * step;
+            // Scale S_EE to canvas height dynamically
+            const y = canvas.height - (sample.entropy * 12); 
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+    }
+
+    // 4. Single Subscription Stream Callback
+    telemetry.subscribe((data) => {
+        // Update connection status
+        if (statusEl) {
+            statusEl.innerText = '● LIVE';
+            statusEl.style.color = '#10b981';
+        }
+
+        // Push data to FIFO buffer & render frame
+        history.push(data);
+        if (history.length > MAX_SAMPLES) history.shift();
+        renderChart();
+    });
+</script>
+</body>
+</html>

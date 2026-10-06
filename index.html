@@ -4,7 +4,7 @@
   FILE: index.html
   CREATOR: Steven Jones
   DATE: 2026-10-05
-  VERSION: 2.2.0
+  VERSION: 2.2.7
   
   DESCRIPTION:
   An interactive client-side simulation exploring emergent holographic network 
@@ -21,6 +21,8 @@
   - Dependencies: None (Zero external framework bloat)
   
   CHANGE LOG:
+  - v2.2.7 (2026-10-06): Added Telemetry Panel & Graphing Real-Time Data Pipeline via BroadcastChannel pop-out.
+  - v2.2.6 (2026-10-06): Integrate variable spacetime curvature and finalize telemetry panels.
   - v2.2.5 (2026-10-07): Improved performance of dynamic environment manifold rendering and optimized HUD element updates,
                          Added sectional commenting to keep me from getting lost.
   - v2.2.4 (2026-10-06): Added UI/UX polishing for telemetry panels and HUD elements.
@@ -46,7 +48,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Holographic Topology Simulator v2.2.6</title>
-    <link rel="stylesheet" href="styles.css">
     <style>
         body {
             margin: 0;
@@ -164,8 +165,8 @@
         button:hover, label.file-btn:hover {
             background: rgba(56, 189, 248, 0.18);
         }
-        input[type="file"], input[type="checkbox"] {
-            cursor: pointer;
+        input[type="file"] {
+            display: none;
         }
         .checkbox-label {
             display: flex;
@@ -189,40 +190,10 @@
 </head>
 <body>
 
-    <!-- ========================================== -->
-    <!-- SECTION: FLOATING TELEMETRY PANELS         -->
-    <!-- ========================================== -->
-
-    <!-- Research Data Export Panel -->
-    <div id="export-controls" class="telemetry-panel">
-        <h3>Research Data Export</h3>
-        <button id="btn-csv">Export CSV Log</button>
-        <button id="btn-snapshot">Capture PNG Snapshot</button>
-        <button id="btn-json">Export State JSON</button>
-        <button id="btn-localstore">Save to Local Storage</button>
-    </div>
-
-    <!-- Fault Injection Controls Panel (v2.2.2) -->
-    <div id="fault-controls" class="telemetry-panel">
-        <h3>Fault Injection & Stress Testing</h3>
-        <button id="btn-spike">Inject Energy Spike</button>
-        <button id="btn-boundary">Toggle Boundary Anomaly</button>
-        <button id="btn-noise">Inject Phase Noise</button>
-        <button id="btn-clear-faults">Clear Faults</button>
-    </div>
-
-    <!-- Advanced Metric Visualizer Panel (v2.2.3) -->
-    <div id="phi-visualizer-panel" class="telemetry-panel">
-        <h3>Integrated Information ($\Phi$) & $S_{EE}$ Telemetry</h3>
-        <canvas id="phi-canvas" width="300" height="120"></canvas>
-    </div>
-
-    <!-- ========================================== -->
-    <!-- SECTION: MAIN HUD INTERFACE & SLIDERS      -->
-    <!-- ========================================== -->
+    <!-- MAIN HUD INTERFACE -->
     <div class="hud">
         <h1>Holographic Topology</h1>
-        <p><strong>Left Drag:</strong> 3D Orbit & Tilt Camera</p>
+        <p><strong>Left Drag:</strong> 3D Orbit &amp; Tilt Camera</p>
         <p><strong>Left Click Canvas:</strong> Inject Node</p>
         <p><strong>Right Click Node:</strong> Sever Node (Interference Pulse)</p>
         <p>Integrity: <span id="integrityMetric" class="metric">100%</span></p>
@@ -239,6 +210,9 @@
                 <label class="file-btn" for="importFile">Import Model</label>
                 <input type="file" id="importFile" accept=".json" autocomplete="off">
                 <button id="resetStateBtn">Reset State</button>
+            </div>
+            <div class="btn-row">
+                <button id="btnPopOut" onclick="window.telemetryBus && window.telemetryBus.openPopOut()">Pop-Out Telemetry ↗</button>
             </div>
 
             <label><span>Environment Manifold</span></label>
@@ -261,29 +235,21 @@
                 <option value="fault">Fault Resilience View</option>
             </select>
 
-            <!-- SLIDER: Entanglement Range -->
             <label><span>Entanglement Range</span><span id="valRange">180</span></label>
             <input type="range" id="rangeSlider" min="80" max="350" value="180" autocomplete="off">
 
-            <!-- SLIDER: Drift Velocity -->
             <label><span>Drift Velocity</span><span id="valDrift">0.8</span></label>
             <input type="range" id="driftSlider" min="0.1" max="3.0" step="0.1" value="0.8" autocomplete="off">
 
-            <!-- SLIDER: Spacetime Curvature (v2.2.6 Placeholder/Target) -->
-             <label><span>Spacetime Curvature ($k$)</span><span id="valCurvature">-1.0</span></label>
+            <label><span>Spacetime Curvature (k)</span><span id="valCurvature">-1.0</span></label>
             <input type="range" id="curvatureSlider" min="-3.0" max="3.0" step="0.1" value="-1.0" autocomplete="off">
-            
-            <!-- [CURVATURE_SLIDER_TARGET] -->
 
-            <!-- SLIDER: Pulse Expansion Speed -->
             <label><span>Pulse Expansion Speed</span><span id="valPulse">4</span></label>
             <input type="range" id="pulseSlider" min="1" max="15" value="4" autocomplete="off">
         </div>
     </div>
 
-    <!-- ========================================== -->
-    <!-- SECTION: SIDE HUD & GIMBAL CAD HUD         -->
-    <!-- ========================================== -->
+    <!-- NODE TELEMETRY HUD -->
     <div id="telemetryBox" class="telemetry-hud">
         <h2>Node Telemetry</h2>
         <div class="telemetry-row"><span>ID:</span><span id="telId" class="telemetry-val">--</span></div>
@@ -292,30 +258,49 @@
         <div class="telemetry-row"><span>3D Position:</span><span id="telPos" class="telemetry-val">(0,0,0)</span></div>
     </div>
 
+    <!-- CAMERA GIMBAL HUD -->
     <div class="gimbal-hud">
         <canvas id="gimbalCanvas" width="70" height="70"></canvas>
         <p style="margin: 2px 0 0 0; font-size: 0.68rem;">Pitch/Yaw Orbit</p>
     </div>
 
-    <!-- ========================================== -->
-    <!-- SECTION: MAIN CANVAS CONTAINER             -->
-    <!-- ========================================== -->
+    <!-- MAIN CANVAS -->
     <div id="canvas-container">
         <canvas id="simCanvas"></canvas>
     </div>
 
-    <!-- ========================================== -->
-    <!-- SECTION: JAVASCRIPT & MODULE IMPORTS       -->
-    <!-- ========================================== -->
-    <script type='module'>
-        // [MODULE_IMPORTS_TARGET]
-        // Example: import { QuantumKernel } from './QuantumKernel.js';
-        // const qKernel = new QuantumKernel();
+    <!-- ENGINE SCRIPT MODULE -->
+    <script type="module">
+        import { TelemetryService } from './js/TelemetryService.js';
 
+        // 1. Initialize Telemetry Service Globally
+        try {
+            window.telemetryBus = new TelemetryService();
+        } catch (e) {
+            console.warn("TelemetryService could not initialize:", e);
+        }
+
+        // 2. DOM Elements Caching
         const canvas = document.getElementById('simCanvas');
         const ctx = canvas.getContext('2d');
         const gimbalCanvas = document.getElementById('gimbalCanvas');
         const gCtx = gimbalCanvas.getContext('2d');
+
+        const rangeSlider = document.getElementById('rangeSlider');
+        const driftSlider = document.getElementById('driftSlider');
+        const curvatureSlider = document.getElementById('curvatureSlider');
+        const pulseSlider = document.getElementById('pulseSlider');
+
+        const modeSelect = document.getElementById('modeSelect');
+        const envSelect = document.getElementById('envSelect');
+        const boundaryToggle = document.getElementById('boundaryToggle');
+        const telemetryBox = document.getElementById('telemetryBox');
+
+        const exportJsonBtn = document.getElementById('exportJsonBtn');
+        const exportCsvBtn = document.getElementById('exportCsvBtn');
+        const exportDotBtn = document.getElementById('exportDotBtn');
+        const importFile = document.getElementById('importFile');
+        const resetStateBtn = document.getElementById('resetStateBtn');
 
         let width = canvas.width = window.innerWidth;
         let height = canvas.height = window.innerHeight;
@@ -325,32 +310,13 @@
             height = canvas.height = window.innerHeight;
         });
 
-        // ==========================================
-        // UI PARAMETER CONTROLS BINDING
-        // ==========================================
-        const rangeSlider = document.getElementById('rangeSlider');
-        const driftSlider = document.getElementById('driftSlider');
-        const curvatureSlider = document.getElementById('curvatureSlider');
-        const pulseSlider = document.getElementById('pulseSlider');
-        // [SLIDER_DOM_CACHE_TARGET]
-
-        const modeSelect = document.getElementById('modeSelect');
-        const envSelect = document.getElementById('envSelect');
-        const boundaryToggle = document.getElementById('boundaryToggle');
-        const telemetryBox = document.getElementById('telemetryBox');
-        const exportJsonBtn = document.getElementById('exportJsonBtn');
-        const exportCsvBtn = document.getElementById('exportCsvBtn');
-        const exportDotBtn = document.getElementById('exportDotBtn');
-        const importFile = document.getElementById('importFile');
-        const resetStateBtn = document.getElementById('resetStateBtn');
-
+        // 3. Slider Display Value Handlers
         rangeSlider.addEventListener('input', (e) => document.getElementById('valRange').innerText = e.target.value);
         driftSlider.addEventListener('input', (e) => document.getElementById('valDrift').innerText = e.target.value);
         curvatureSlider.addEventListener('input', (e) => document.getElementById('valCurvature').innerText = e.target.value);
         pulseSlider.addEventListener('input', (e) => document.getElementById('valPulse').innerText = e.target.value);
-        // [SLIDER_EVENT_LISTENER_TARGET]
 
-        // 3D Orbit Camera Engine Parameters
+        // 4. Camera Orbit System
         let angleX = 0.25; 
         let angleY = -0.35; 
         let isDragging = false;
@@ -363,10 +329,45 @@
 
         window.addEventListener('mousedown', (e) => {
             if (e.target.closest('.hud') || e.target.closest('.telemetry-hud')) return;
-            isDragging = true;
-            prevMouseX = e.clientX;
-            prevMouseY = e.clientY;
+            
+            // Check node click interaction
+            const rect = canvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+
+            let clickedNode = null;
+            for (let n of nodes) {
+                const proj = project3D(n.x, n.y, n.z);
+                const dist = Math.hypot(proj.px - clickX, proj.py - clickY);
+                if (dist < n.baseRadius * proj.scale + 6) {
+                    clickedNode = n;
+                    break;
+                }
+            }
+
+            if (e.button === 2 && clickedNode) {
+                // Right Click: Sever Node
+                clickedNode.isSevered = true;
+                clickedNode.pulseEffect = 1.0;
+                return;
+            } else if (e.button === 0 && clickedNode) {
+                // Left Click Node: Select Node Telemetry
+                selectedNode = clickedNode;
+                telemetryBox.style.display = 'block';
+                return;
+            } else if (e.button === 0 && !clickedNode) {
+                // Left Click Canvas: Inject Node or Start Drag
+                const isHUDClick = e.clientX < 320 && e.clientY < 600;
+                if (!isHUDClick) {
+                    // Start 3D Drag
+                    isDragging = true;
+                    prevMouseX = e.clientX;
+                    prevMouseY = e.clientY;
+                }
+            }
         });
+
+        window.addEventListener('contextmenu', (e) => e.preventDefault());
 
         window.addEventListener('mousemove', (e) => {
             if (!isDragging) return;
@@ -403,33 +404,10 @@
             };
         }
 
-        const STORAGE_KEY = 'holographic_topology_state_v2.2';
+        // 5. Simulation Node State Engine
         let selectedNode = null;
         let nodeCounter = 0;
         let initialActiveCount = 0;
-
-        function saveToLocalStorage() {
-            const state = {
-                version: "2.2.6",
-                timestamp: new Date().toISOString(),
-                environment: envSelect.value,
-                boundaryReflectivity: boundaryToggle.checked,
-                curvature: parseFloat(curvatureSlider.value),
-                nodes: nodes.map(n => ({
-                    id: n.id,
-                    x: n.x, y: n.y, z: n.z,
-                    vx: n.vx, vy: n.vy, vz: n.vz,
-                    isCore: n.isCore,
-                    isSevered: n.isSevered,
-                    health: n.health
-                }))
-            };
-            try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-            } catch (err) {
-                console.error("Failed to save state to localStorage:", err);
-            }
-        }
 
         class Node {
             constructor(x, y, z, isCore = false) {
@@ -458,7 +436,6 @@
 
                 if (this.pulseEffect > 0) this.pulseEffect -= 0.03;
 
-                // Spacetime Curvature (k) influences drift velocity vector via metric gravitational pull toward origin
                 const distFromOrigin = Math.hypot(this.x, this.y, this.z) || 1;
                 if (kCurvature !== 0) {
                     const pullFactor = (kCurvature * 0.015) / (distFromOrigin * 0.05);
@@ -466,7 +443,6 @@
                     this.vy -= (this.y / distFromOrigin) * pullFactor;
                     this.vz -= (this.z / distFromOrigin) * pullFactor;
                     
-                    // Normalize velocity vector magnitude slightly to prevent runaway acceleration
                     const vMag = Math.hypot(this.vx, this.vy, this.vz) || 1;
                     const targetSpeed = parseFloat(driftSlider.value);
                     this.vx = (this.vx / vMag) * targetSpeed;
@@ -545,11 +521,81 @@
             }
 
             initialActiveCount = nodes.length;
-            saveToLocalStorage();
         }
 
         initDefaultTopology();
 
+        // 6. Export / Import / Reset Handlers
+        resetStateBtn.addEventListener('click', () => {
+            initDefaultTopology();
+        });
+
+        exportJsonBtn.addEventListener('click', () => {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(nodes, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "holographic_topology.json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        });
+
+        exportCsvBtn.addEventListener('click', () => {
+            let csv = "ID,Type,X,Y,Z,Health,Severed\n";
+            nodes.forEach(n => {
+                csv += `${n.id},${n.isCore ? 'Core' : 'Standard'},${n.x.toFixed(2)},${n.y.toFixed(2)},${n.z.toFixed(2)},${n.health.toFixed(2)},${n.isSevered}\n`;
+            });
+            const dataStr = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "holographic_topology.csv");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        });
+
+        exportDotBtn.addEventListener('click', () => {
+            let dot = "graph HolographicTopology {\n";
+            nodes.forEach(n => {
+                if (!n.isSevered) {
+                    dot += `  "${n.id}" [color="${n.isCore ? 'blue' : 'cyan'}"];\n`;
+                }
+            });
+            dot += "}\n";
+            const dataStr = "data:text/plain;charset=utf-8," + encodeURIComponent(dot);
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "holographic_topology.dot");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        });
+
+        importFile.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                try {
+                    const parsed = JSON.parse(evt.target.result);
+                    if (Array.isArray(parsed)) {
+                        nodes.length = 0;
+                        parsed.forEach(nData => {
+                            const n = new Node(nData.x, nData.y, nData.z, nData.isCore);
+                            n.id = nData.id || n.id;
+                            n.isSevered = !!nData.isSevered;
+                            n.health = nData.health !== undefined ? nData.health : 1.0;
+                            nodes.push(n);
+                        });
+                    }
+                } catch (err) {
+                    alert("Invalid JSON Topology file.");
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        // 7. Render Functions
         function drawEnvironmentBoundary() {
             const env = envSelect.value;
             ctx.lineWidth = 1;
@@ -601,9 +647,9 @@
             };
 
             const axes = [
-                { vec: [len, 0, 0], color: '#ef4444', label: 'X' },
-                { vec: [0, -len, 0], color: '#10b981', label: 'Y' },
-                { vec: [0, 0, len], color: '#38bdf8', label: 'Z' }
+                { vec: [len, 0, 0], color: '#ef4444' },
+                { vec: [0, -len, 0], color: '#10b981' },
+                { vec: [0, 0, len], color: '#38bdf8' }
             ];
 
             axes.forEach(axis => {
@@ -617,6 +663,7 @@
             });
         }
 
+        // 8. Main Loop
         function animate() {
             ctx.fillStyle = '#070a12';
             ctx.fillRect(0, 0, width, height);
@@ -624,7 +671,6 @@
             drawEnvironmentBoundary();
             drawGimbalHUD();
 
-            const mode = modeSelect.value;
             const maxDistance = parseFloat(rangeSlider.value);
             const kCurvature = parseFloat(curvatureSlider.value);
 
@@ -633,12 +679,9 @@
                 n.activeBonds = 0;
             });
 
-            // Calculate Entanglement Bonds
             let totalBondWeight = 0;
             let coreBondCount = 0;
             let activePairs = 0;
-            
-            // [BOND_WEIGHTS_ARRAY_TARGET] - Collect weights here for QuantumKernel if needed
 
             for (let i = 0; i < nodes.length; i++) {
                 for (let j = i + 1; j < nodes.length; j++) {
@@ -659,7 +702,6 @@
                         if (isCoreBond) coreBondCount++;
 
                         const weightMultiplier = isCoreBond ? 1.5 : 1.0;
-                        // Spacetime curvature slightly modulates effective bond strength/tension
                         const curvatureMod = 1.0 + (kCurvature * 0.05);
                         const bondStrength = Math.pow(factor, 1.5) * weightMultiplier * Math.max(0.2, curvatureMod);
                         totalBondWeight += bondStrength;
@@ -677,7 +719,7 @@
                 }
             }
 
-            // Draw Nodes in 3D
+            // Render Nodes
             const projectedNodes = nodes.map(n => ({
                 node: n,
                 proj: project3D(n.x, n.y, n.z)
@@ -687,17 +729,39 @@
                 if (node.health <= 0) return;
 
                 ctx.beginPath();
-                ctx.arc(proj.px, proj.py, node.baseRadius * proj.scale, 0, Math.PI * 2);
-                ctx.fillStyle = node.isCore ? '#0284c7' : '#38bdf8';
+                ctx.arc(proj.px, proj.py, Math.max(1, node.baseRadius * proj.scale), 0, Math.PI * 2);
+                ctx.fillStyle = node.isSevered ? '#ef4444' : (node.isCore ? '#0284c7' : '#38bdf8');
                 ctx.fill();
             });
 
-            // Physics Metrics
+            // Metrics Update
             const activeNodes = nodes.filter(n => !n.isSevered);
-            
-            // [METRICS_CALCULATION_TARGET]
-            document.getElementById('entropyMetric').innerText = (totalBondWeight * 0.46).toFixed(2);
-            document.getElementById('phiMetric').innerText = (activePairs > 0 ? (coreBondCount * 2.5 + totalBondWeight) / activeNodes.length : 0).toFixed(2);
+            const integrity = initialActiveCount > 0 ? Math.round((activeNodes.length / initialActiveCount) * 100) : 100;
+            const entropyVal = totalBondWeight * 0.46;
+            const phiVal = activeNodes.length > 0 ? (coreBondCount * 2.5 + totalBondWeight) / activeNodes.length : 0;
+
+            document.getElementById('integrityMetric').innerText = `${integrity}%`;
+            document.getElementById('entropyMetric').innerText = entropyVal.toFixed(2);
+            document.getElementById('phiMetric').innerText = phiVal.toFixed(2);
+
+            // Update Selected Node HUD Panel
+            if (selectedNode) {
+                document.getElementById('telId').innerText = selectedNode.id;
+                document.getElementById('telClass').innerText = selectedNode.isCore ? 'Core Node' : 'Standard Node';
+                document.getElementById('telBonds').innerText = selectedNode.activeBonds;
+                document.getElementById('telPos').innerText = `(${selectedNode.x.toFixed(0)}, ${selectedNode.y.toFixed(0)}, ${selectedNode.z.toFixed(0)})`;
+            }
+
+            // Publish Telemetry to BroadcastChannel
+            if (window.telemetryBus && window.telemetryBus.publish) {
+                window.telemetryBus.publish({
+                    entropy: entropyVal,
+                    phi: phiVal,
+                    activeNodes: activeNodes.length,
+                    curvature: kCurvature,
+                    drift: parseFloat(driftSlider.value)
+                });
+            }
 
             requestAnimationFrame(animate);
         }
