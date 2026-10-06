@@ -2,12 +2,8 @@ import { ExportManager } from './exportManager.js';
 import { FaultInjector } from './faultInjector.js';
 import { PhiVisualizer } from './phiVisualizer.js';
 import { PerformanceManager } from './performanceManager.js';
-import { TestModel } from './testModel.js';
 
-// Instantiate mock test model and canvas for standalone verification
-const simulatorInstance = new TestModel();
-const canvasElement = simulatorInstance.canvasElement;
-
+// Assuming `simulatorInstance` and `canvasElement` exist in your app setup:
 const exportManager = new ExportManager(simulatorInstance);
 const faultInjector = new FaultInjector(simulatorInstance);
 const perfManager = new PerformanceManager(60);
@@ -61,3 +57,4 @@ function simulationLoop() {
 }
 
 requestAnimationFrame(simulationLoop);
+}
