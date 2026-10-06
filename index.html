@@ -11,7 +11,8 @@
   topologies, dynamic environment manifold selection (AdS Hypersphere, Periodic Torus,
   Open Unbounded Space, and Bounded Cubic Cavity), full 3D pitch/yaw camera orbit,
   multi-format model export/import (JSON, CSV, DOT), persistent local storage,
-  Ryu-Takayanagi entanglement entropy ($S_{EE}$), and Integrated Information ($\Phi$).
+  Ryu-Takayanagi entanglement entropy ($S_{EE}$), and Integrated Information ($\Phi$).,
+  and variable Spacetime Curvature ($k$).
   
   ENVIRONMENT & TOOLSTACK:
   - OS: macOS Sequoia (Hackintosh Architecture)
@@ -20,9 +21,10 @@
   - Dependencies: None (Zero external framework bloat)
   
   CHANGE LOG:
-  - v2.2.5 (2026-10-07): Improved performance of dynamic environment manifold rendering and optimized HUD element updates.
+  - v2.2.5 (2026-10-07): Improved performance of dynamic environment manifold rendering and optimized HUD element updates,
+                         Added sectional commenting to keep me from getting lost.
   - v2.2.4 (2026-10-06): Added UI/UX polishing for telemetry panels and HUD elements.
-  - v2.2.3 (2026-10-06): Added advanced metric visualizer for Integrated Information ($\Phi$)) and Entanglement Entropy ($S_{EE}$).
+  - v2.2.3 (2026-10-06): Added advanced metric visualizer for Integrated Information ($\Phi$) and Entanglement Entropy ($S_{EE}$).
   - v2.2.2 (2026-10-06): Added fault injection controls for stress testing and dynamic environment adjustments.
   - v2.2.1 (2026-10-07): Patched minor bugs in fault injection logic and improved HUD responsiveness.
   - v2.2.0 (2026-10-05): Added dynamic Environment Manifold Selector (Spherical AdS Horizon,
@@ -38,34 +40,12 @@
   ==============================================================
 -->
 
-
-<!-- Research Data Export Panel -->
-<div id="export-controls" class="telemetry-panel">
-    <h3>Research Data Export</h3>
-    <button id="btn-csv">Export CSV Log</button>
-    <button id="btn-snapshot">Capture PNG Snapshot</button>
-    <button id="btn-json">Export State JSON</button>
-    <button id="btn-localstore">Save to Local Storage</button>
-</div>
-<!-- Fault Injection Controls Panel (v2.2.2) -->
-<div id="fault-controls" class="telemetry-panel">
-    <h3>Fault Injection & Stress Testing</h3>
-    <button id="btn-spike">Inject Energy Spike</button>
-    <button id="btn-boundary">Toggle Boundary Anomaly</button>
-    <button id="btn-noise">Inject Phase Noise</button>
-    <button id="btn-clear-faults">Clear Faults</button>
-</div>
-<!-- Advanced Metric Visualizer Panel (v2.2.3) -->
-<div id="phi-visualizer-panel" class="telemetry-panel">
-    <h3>Integrated Information ($\Phi$) & $S_{EE}$ Telemetry</h3>
-    <canvas id="phi-canvas" width="300" height="120"></canvas>
-</div>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Holographic Topology Simulator v2.2.0</title>
+    <title>Holographic Topology Simulator v2.2.6</title>
     <link rel="stylesheet" href="styles.css">
     <style>
         body {
@@ -209,6 +189,10 @@
 </head>
 <body>
 
+    <!-- ========================================== -->
+    <!-- SECTION: FLOATING TELEMETRY PANELS         -->
+    <!-- ========================================== -->
+
     <!-- Research Data Export Panel -->
     <div id="export-controls" class="telemetry-panel">
         <h3>Research Data Export</h3>
@@ -233,6 +217,9 @@
         <canvas id="phi-canvas" width="300" height="120"></canvas>
     </div>
 
+    <!-- ========================================== -->
+    <!-- SECTION: MAIN HUD INTERFACE & SLIDERS      -->
+    <!-- ========================================== -->
     <div class="hud">
         <h1>Holographic Topology</h1>
         <p><strong>Left Drag:</strong> 3D Orbit & Tilt Camera</p>
@@ -274,17 +261,29 @@
                 <option value="fault">Fault Resilience View</option>
             </select>
 
+            <!-- SLIDER: Entanglement Range -->
             <label><span>Entanglement Range</span><span id="valRange">180</span></label>
             <input type="range" id="rangeSlider" min="80" max="350" value="180" autocomplete="off">
 
+            <!-- SLIDER: Drift Velocity -->
             <label><span>Drift Velocity</span><span id="valDrift">0.8</span></label>
             <input type="range" id="driftSlider" min="0.1" max="3.0" step="0.1" value="0.8" autocomplete="off">
 
+            <!-- SLIDER: Spacetime Curvature (v2.2.6 Placeholder/Target) -->
+             <label><span>Spacetime Curvature ($k$)</span><span id="valCurvature">-1.0</span></label>
+            <input type="range" id="curvatureSlider" min="-3.0" max="3.0" step="0.1" value="-1.0" autocomplete="off">
+            
+            <!-- [CURVATURE_SLIDER_TARGET] -->
+
+            <!-- SLIDER: Pulse Expansion Speed -->
             <label><span>Pulse Expansion Speed</span><span id="valPulse">4</span></label>
             <input type="range" id="pulseSlider" min="1" max="15" value="4" autocomplete="off">
         </div>
     </div>
 
+    <!-- ========================================== -->
+    <!-- SECTION: SIDE HUD & GIMBAL CAD HUD         -->
+    <!-- ========================================== -->
     <div id="telemetryBox" class="telemetry-hud">
         <h2>Node Telemetry</h2>
         <div class="telemetry-row"><span>ID:</span><span id="telId" class="telemetry-val">--</span></div>
@@ -298,11 +297,21 @@
         <p style="margin: 2px 0 0 0; font-size: 0.68rem;">Pitch/Yaw Orbit</p>
     </div>
 
+    <!-- ========================================== -->
+    <!-- SECTION: MAIN CANVAS CONTAINER             -->
+    <!-- ========================================== -->
     <div id="canvas-container">
         <canvas id="simCanvas"></canvas>
     </div>
 
-    <script>
+    <!-- ========================================== -->
+    <!-- SECTION: JAVASCRIPT & MODULE IMPORTS       -->
+    <!-- ========================================== -->
+    <script type='module'>
+        // [MODULE_IMPORTS_TARGET]
+        // Example: import { QuantumKernel } from './QuantumKernel.js';
+        // const qKernel = new QuantumKernel();
+
         const canvas = document.getElementById('simCanvas');
         const ctx = canvas.getContext('2d');
         const gimbalCanvas = document.getElementById('gimbalCanvas');
@@ -316,10 +325,15 @@
             height = canvas.height = window.innerHeight;
         });
 
-        // UI Parameter Controls
+        // ==========================================
+        // UI PARAMETER CONTROLS BINDING
+        // ==========================================
         const rangeSlider = document.getElementById('rangeSlider');
         const driftSlider = document.getElementById('driftSlider');
+        const curvatureSlider = document.getElementById('curvatureSlider');
         const pulseSlider = document.getElementById('pulseSlider');
+        // [SLIDER_DOM_CACHE_TARGET]
+
         const modeSelect = document.getElementById('modeSelect');
         const envSelect = document.getElementById('envSelect');
         const boundaryToggle = document.getElementById('boundaryToggle');
@@ -332,7 +346,9 @@
 
         rangeSlider.addEventListener('input', (e) => document.getElementById('valRange').innerText = e.target.value);
         driftSlider.addEventListener('input', (e) => document.getElementById('valDrift').innerText = e.target.value);
+        curvatureSlider.addEventListener('input', (e) => document.getElementById('valCurvature').innerText = e.target.value);
         pulseSlider.addEventListener('input', (e) => document.getElementById('valPulse').innerText = e.target.value);
+        // [SLIDER_EVENT_LISTENER_TARGET]
 
         // 3D Orbit Camera Engine Parameters
         let angleX = 0.25; 
@@ -394,10 +410,11 @@
 
         function saveToLocalStorage() {
             const state = {
-                version: "2.2.0",
+                version: "2.2.6",
                 timestamp: new Date().toISOString(),
                 environment: envSelect.value,
                 boundaryReflectivity: boundaryToggle.checked,
+                curvature: parseFloat(curvatureSlider.value),
                 nodes: nodes.map(n => ({
                     id: n.id,
                     x: n.x, y: n.y, z: n.z,
@@ -433,13 +450,29 @@
                 this.activeBonds = 0;
             }
 
-            update() {
+            update(kCurvature) {
                 if (this.isSevered) {
                     this.health -= 0.02;
                     return;
                 }
 
                 if (this.pulseEffect > 0) this.pulseEffect -= 0.03;
+
+                // Spacetime Curvature (k) influences drift velocity vector via metric gravitational pull toward origin
+                const distFromOrigin = Math.hypot(this.x, this.y, this.z) || 1;
+                if (kCurvature !== 0) {
+                    const pullFactor = (kCurvature * 0.015) / (distFromOrigin * 0.05);
+                    this.vx -= (this.x / distFromOrigin) * pullFactor;
+                    this.vy -= (this.y / distFromOrigin) * pullFactor;
+                    this.vz -= (this.z / distFromOrigin) * pullFactor;
+                    
+                    // Normalize velocity vector magnitude slightly to prevent runaway acceleration
+                    const vMag = Math.hypot(this.vx, this.vy, this.vz) || 1;
+                    const targetSpeed = parseFloat(driftSlider.value);
+                    this.vx = (this.vx / vMag) * targetSpeed;
+                    this.vy = (this.vy / vMag) * targetSpeed;
+                    this.vz = (this.vz / vMag) * targetSpeed;
+                }
 
                 const speed = parseFloat(driftSlider.value) * (this.isCore ? 0.35 : 1.0);
                 this.x += this.vx * speed;
@@ -593,9 +626,10 @@
 
             const mode = modeSelect.value;
             const maxDistance = parseFloat(rangeSlider.value);
+            const kCurvature = parseFloat(curvatureSlider.value);
 
             nodes.forEach(n => {
-                n.update();
+                n.update(kCurvature);
                 n.activeBonds = 0;
             });
 
@@ -603,6 +637,8 @@
             let totalBondWeight = 0;
             let coreBondCount = 0;
             let activePairs = 0;
+            
+            // [BOND_WEIGHTS_ARRAY_TARGET] - Collect weights here for QuantumKernel if needed
 
             for (let i = 0; i < nodes.length; i++) {
                 for (let j = i + 1; j < nodes.length; j++) {
@@ -623,7 +659,9 @@
                         if (isCoreBond) coreBondCount++;
 
                         const weightMultiplier = isCoreBond ? 1.5 : 1.0;
-                        const bondStrength = Math.pow(factor, 1.5) * weightMultiplier;
+                        // Spacetime curvature slightly modulates effective bond strength/tension
+                        const curvatureMod = 1.0 + (kCurvature * 0.05);
+                        const bondStrength = Math.pow(factor, 1.5) * weightMultiplier * Math.max(0.2, curvatureMod);
                         totalBondWeight += bondStrength;
 
                         const p1 = project3D(nodes[i].x, nodes[i].y, nodes[i].z);
@@ -632,7 +670,7 @@
                         ctx.beginPath();
                         ctx.moveTo(p1.px, p1.py);
                         ctx.lineTo(p2.px, p2.py);
-                        ctx.strokeStyle = `rgba(56, 189, 248, ${bondStrength * 0.6})`;
+                        ctx.strokeStyle = `rgba(56, 189, 248, ${Math.min(1.0, bondStrength * 0.6)})`;
                         ctx.lineWidth = factor * 2;
                         ctx.stroke();
                     }
@@ -656,6 +694,8 @@
 
             // Physics Metrics
             const activeNodes = nodes.filter(n => !n.isSevered);
+            
+            // [METRICS_CALCULATION_TARGET]
             document.getElementById('entropyMetric').innerText = (totalBondWeight * 0.46).toFixed(2);
             document.getElementById('phiMetric').innerText = (activePairs > 0 ? (coreBondCount * 2.5 + totalBondWeight) / activeNodes.length : 0).toFixed(2);
 
