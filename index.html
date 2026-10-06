@@ -20,6 +20,11 @@
   - Dependencies: None (Zero external framework bloat)
   
   CHANGE LOG:
+  - v2.2.5 (2026-10-07): Improved performance of dynamic environment manifold rendering and optimized HUD element updates.
+  - v2.2.4 (2026-10-06): Added UI/UX polishing for telemetry panels and HUD elements.
+  - v2.2.3 (2026-10-06): Added advanced metric visualizer for Integrated Information ($\Phi$)) and Entanglement Entropy ($S_{EE}$).
+  - v2.2.2 (2026-10-06): Added fault injection controls for stress testing and dynamic environment adjustments.
+  - v2.2.1 (2026-10-07): Patched minor bugs in fault injection logic and improved HUD responsiveness.
   - v2.2.0 (2026-10-05): Added dynamic Environment Manifold Selector (Spherical AdS Horizon,
                          Periodic Torus, Open Unbounded Space, Cubic Cavity) and live
                          Boundary Enforcement Toggles.
@@ -61,6 +66,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Holographic Topology Simulator v2.2.0</title>
+    <link rel="stylesheet" href="styles.css">
     <style>
         body {
             margin: 0;
@@ -202,6 +208,30 @@
     </style>
 </head>
 <body>
+
+    <!-- Research Data Export Panel -->
+    <div id="export-controls" class="telemetry-panel">
+        <h3>Research Data Export</h3>
+        <button id="btn-csv">Export CSV Log</button>
+        <button id="btn-snapshot">Capture PNG Snapshot</button>
+        <button id="btn-json">Export State JSON</button>
+        <button id="btn-localstore">Save to Local Storage</button>
+    </div>
+
+    <!-- Fault Injection Controls Panel (v2.2.2) -->
+    <div id="fault-controls" class="telemetry-panel">
+        <h3>Fault Injection & Stress Testing</h3>
+        <button id="btn-spike">Inject Energy Spike</button>
+        <button id="btn-boundary">Toggle Boundary Anomaly</button>
+        <button id="btn-noise">Inject Phase Noise</button>
+        <button id="btn-clear-faults">Clear Faults</button>
+    </div>
+
+    <!-- Advanced Metric Visualizer Panel (v2.2.3) -->
+    <div id="phi-visualizer-panel" class="telemetry-panel">
+        <h3>Integrated Information ($\Phi$) & $S_{EE}$ Telemetry</h3>
+        <canvas id="phi-canvas" width="300" height="120"></canvas>
+    </div>
 
     <div class="hud">
         <h1>Holographic Topology</h1>

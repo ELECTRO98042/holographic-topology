@@ -1,0 +1,57 @@
+/* v2.2.5 - Research-Grade Dashboard HUD Styling */
+:root {
+    --hud-bg: rgba(13, 17, 23, 0.85);
+    --hud-border: rgba(56, 139, 253, 0.4);
+    --hud-accent: #58a6ff;
+    --hud-text: #c9d1d9;
+    --hud-glow: 0 0 10px rgba(88, 166, 255, 0.15);
+}
+
+#export-controls, #fault-controls, .phi-visualizer-panel {
+    background: var(--hud-bg);
+    border: 1px solid var(--hud-border);
+    border-radius: 6px;
+    padding: 12px;
+    backdrop-filter: blur(8px);
+    box-shadow: var(--hud-glow);
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    color: var(--hud-text);
+    margin-bottom: 12px;
+}
+
+/* Control Group Grid Layout */
+.control-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-top: 8px;
+}
+
+/* HUD Button Styling */
+.hud-btn {
+    background: rgba(22, 27, 34, 0.9);
+    border: 1px solid rgba(201, 209, 217, 0.2);
+    color: var(--hud-text);
+    padding: 6px 10px;
+    font-size: 11px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.hud-btn:hover {
+    background: var(--hud-accent);
+    color: #0d1117;
+    border-color: var(--hud-accent);
+    box-shadow: 0 0 8px rgba(88, 166, 255, 0.4);
+}
+
+.hud-btn.danger {
+    border-color: rgba(248, 81, 73, 0.4);
+}
+
+.hud-btn.danger:hover {
+    background: #f85149;
+    color: #ffffff;
+    box-shadow: 0 0 8px rgba(248, 81, 73, 0.4);
+}
