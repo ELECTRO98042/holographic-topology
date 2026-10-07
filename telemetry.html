@@ -44,6 +44,25 @@
     </style>
 </head>
 <body>
+    <!-- Floating Exit Fullscreen Control (Hidden by default) -->
+    <button id="exitFullscreenBtn" style="
+        display: none;
+        position: fixed;
+        top: 12px;
+        right: 12px;
+        z-index: 9999;
+        background: rgba(15, 23, 42, 0.9);
+        color: #38bdf8;
+        border: 1px solid rgba(56, 189, 248, 0.5);
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-family: inherit;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+    ">✕ Exit Fullscreen</button>
+
     <div class="header">
         <h1>Real-Time Telemetry Feed</h1>
         <span id="status" class="status-tag">● STREAMING</span>
@@ -57,10 +76,11 @@
     // 1. Instantiate Telemetry Service
     const telemetry = new TelemetryService();
 
-    // 2. Setup Canvas & Window Listeners Once at Startup
+    // 2. Setup Canvas & Elements
     const canvas = document.getElementById('popoutChartCanvas');
     const ctx = canvas.getContext('2d');
-    const statusEl = document.getElementById('statusIndicator');
+    const statusEl = document.getElementById('status');
+    const exitBtn = document.getElementById('exitFullscreenBtn');
 
     function resizeCanvas() {
         if (canvas) {
@@ -79,7 +99,6 @@
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         if (history.length < 2) return;
 
-        // Oscilloscope line rendering for S_EE (Entanglement Entropy)
         ctx.beginPath();
         ctx.strokeStyle = '#38bdf8';
         ctx.lineWidth = 2;
@@ -87,7 +106,6 @@
         const step = canvas.width / (MAX_SAMPLES - 1);
         history.forEach((sample, i) => {
             const x = i * step;
-            // Scale S_EE to canvas height dynamically
             const y = canvas.height - (sample.entropy * 12); 
             if (i === 0) ctx.moveTo(x, y);
             else ctx.lineTo(x, y);
@@ -95,19 +113,67 @@
         ctx.stroke();
     }
 
-    // 4. Single Subscription Stream Callback
+    // 4. Subscription Stream Callback
     telemetry.subscribe((data) => {
-        // Update connection status
         if (statusEl) {
             statusEl.innerText = '● LIVE';
             statusEl.style.color = '#10b981';
         }
 
-        // Push data to FIFO buffer & render frame
         history.push(data);
         if (history.length > MAX_SAMPLES) history.shift();
         renderChart();
     });
-</script>
+
+    // 5. Fullscreen Management System (v2.2.8)
+    function toggleFullscreen() {
+        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+            if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen();
+            } else if (document.documentElement.webkitRequestFullscreen) {
+                document.documentElement.webkitRequestFullscreen();
+            }
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            }
+        }
+    }
+
+    function handleFullscreenChange() {
+        const isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
+        if (exitBtn) {
+            exitBtn.style.display = isFullscreen ? 'block' : 'none';
+        }
+        setTimeout(resizeCanvas, 100);
+    }
+
+    if (exitBtn) {
+        exitBtn.addEventListener('click', toggleFullscreen);
+    }
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+
+    // Double-click window background to toggle safely
+    window.addEventListener('dblclick', (e) => {
+        if (e.target.tagName !== 'BUTTON') {
+            toggleFullscreen();
+        }
+    });
+
+    // Keyboard Fallback (ESC Key)
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
+            if (isFullscreen) {
+                e.preventDefault();
+                toggleFullscreen();
+            }
+        }
+    });
+    </script>
 </body>
 </html>
