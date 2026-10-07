@@ -71,109 +71,78 @@
     <canvas id="popoutChartCanvas"></canvas>
 
     <script type="module">
-    import { TelemetryService } from './js/TelemetryService.js';
+import { TelemetryService } from './js/TelemetryService.js';
+import { TopologyMeshViewer } from './js/TopologyMeshViewer.js';
 
-    // 1. Instantiate Telemetry Service
-    const telemetry = new TelemetryService();
+// 1. Service & Elements
+const telemetry = new TelemetryService();
+const canvas = document.getElementById('popoutChartCanvas');
+const statusEl = document.getElementById('status');
+const exitBtn = document.getElementById('exitFullscreenBtn');
 
-    // 2. Setup Canvas & Elements
-    const canvas = document.getElementById('popoutChartCanvas');
-    const ctx = canvas.getContext('2d');
-    const statusEl = document.getElementById('status');
-    const exitBtn = document.getElementById('exitFullscreenBtn');
+// 2. Instantiate 3D Mesh Viewer
+const meshViewer = new TopologyMeshViewer(canvas);
 
-    function resizeCanvas() {
-        if (canvas) {
-            canvas.width = canvas.clientWidth;
-            canvas.height = canvas.clientHeight;
-        }
+function resizeCanvas() {
+    if (meshViewer) {
+        meshViewer.resize();
     }
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
+}
 
-    // 3. FIFO Buffer & Chart Renderer Setup
-    const history = [];
-    const MAX_SAMPLES = 150;
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
 
-    function renderChart() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        if (history.length < 2) return;
-
-        ctx.beginPath();
-        ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 2;
-
-        const step = canvas.width / (MAX_SAMPLES - 1);
-        history.forEach((sample, i) => {
-            const x = i * step;
-            const y = canvas.height - (sample.entropy * 12); 
-            if (i === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-        });
-        ctx.stroke();
+// 3. Telemetry Stream Callback
+telemetry.subscribe((data) => {
+    if (statusEl) {
+        statusEl.innerText = '● LIVE (3D TOPOLOGY)';
+        statusEl.style.color = '#10b981';
     }
 
-    // 4. Subscription Stream Callback
-    telemetry.subscribe((data) => {
-        if (statusEl) {
-            statusEl.innerText = '● LIVE';
-            statusEl.style.color = '#10b981';
+    // Pass real-time metrics directly into WebGL vertex displacement engine
+    meshViewer.update(data);
+});
+
+// 4. Fullscreen Mechanics (v2.2.8)
+function toggleFullscreen() {
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen();
+        } else if (document.documentElement.webkitRequestFullscreen) {
+            document.documentElement.webkitRequestFullscreen();
         }
-
-        history.push(data);
-        if (history.length > MAX_SAMPLES) history.shift();
-        renderChart();
-    });
-
-    // 5. Fullscreen Management System (v2.2.8)
-    function toggleFullscreen() {
-        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-            if (document.documentElement.requestFullscreen) {
-                document.documentElement.requestFullscreen();
-            } else if (document.documentElement.webkitRequestFullscreen) {
-                document.documentElement.webkitRequestFullscreen();
-            }
-        } else {
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-            } else if (document.webkitExitFullscreen) {
-                document.webkitExitFullscreen();
-            }
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
         }
     }
+}
 
-    function handleFullscreenChange() {
+function handleFullscreenChange() {
+    const isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    if (exitBtn) exitBtn.style.display = isFullscreen ? 'block' : 'none';
+    setTimeout(resizeCanvas, 100);
+}
+
+if (exitBtn) exitBtn.addEventListener('click', toggleFullscreen);
+document.addEventListener('fullscreenchange', handleFullscreenChange);
+document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+
+window.addEventListener('dblclick', (e) => {
+    if (e.target.tagName !== 'BUTTON') toggleFullscreen();
+});
+
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
         const isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
-        if (exitBtn) {
-            exitBtn.style.display = isFullscreen ? 'block' : 'none';
-        }
-        setTimeout(resizeCanvas, 100);
-    }
-
-    if (exitBtn) {
-        exitBtn.addEventListener('click', toggleFullscreen);
-    }
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-
-    // Double-click window background to toggle safely
-    window.addEventListener('dblclick', (e) => {
-        if (e.target.tagName !== 'BUTTON') {
+        if (isFullscreen) {
+            e.preventDefault();
             toggleFullscreen();
         }
-    });
-
-    // Keyboard Fallback (ESC Key)
-    window.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            const isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
-            if (isFullscreen) {
-                e.preventDefault();
-                toggleFullscreen();
-            }
-        }
-    });
-    </script>
+    }
+});
+</script>
 </body>
 </html>
