@@ -4,15 +4,7 @@
   FILE: index.html
   CREATOR: Steven Jones
   DATE: 2026-10-05
-  -->
-
-<!-- Holographic Telemetry Monitor v2.3.0 -->
-<div class="header-container">
-    <span class="title">REAL-TIME TELEMETRY FEED</span>
-    <span class="status-indicator">LIVE (3D TOPOLOGY • FDTD SOLVER v2.3.0)</span>
-</div>
-  
-  <!--
+  VERSION: v2.3.0
   DESCRIPTION:
   An interactive client-side simulation exploring emergent holographic network 
   topologies, dynamic environment manifold selection (AdS Hypersphere, Periodic Torus,
@@ -281,6 +273,15 @@
     <!-- ENGINE SCRIPT MODULE -->
     <script type="module">
         import { TelemetryService } from './js/TelemetryService.js';
+        import { AdSBoundaryMapper } from './physics/holographic/AdSBoundaryMapper.js';
+        import { WaveEquationSolver } from './physics/dynamics/WaveEquationSolver.js';
+        import { IntegratedInformationCalculator } from './physics/information/IntegratedInformationCalculator.js';
+
+        // Initialize instances globally or scoped to your app
+
+        window.adsMapper = new AdSBoundaryMapper(32, 8);
+        window.waveSolver = new WaveEquationSolver(32, 1.0, 0.5)
+        window.phiCalculator = new IntegratedInformationCalculator(32); // or your initial node count constant
 
         // 1. Initialize Telemetry Service Globally
         try {
@@ -310,14 +311,18 @@
         const exportDotBtn = document.getElementById('exportDotBtn');
         const importFile = document.getElementById('importFile');
         const resetStateBtn = document.getElementById('resetStateBtn');
-
+        
         let width = canvas.width = window.innerWidth;
         let height = canvas.height = window.innerHeight;
 
         window.addEventListener('resize', () => {
             width = canvas.width = window.innerWidth;
             height = canvas.height = window.innerHeight;
-        });
+            });
+
+        if (window.waveSolver && typeof window.waveSolver.injectPulse === 'function') {
+            window.waveSolver.injectPulse(16, 16, 2.5);
+        }
 
         // 3. Slider Display Value Handlers
         rangeSlider.addEventListener('input', (e) => document.getElementById('valRange').innerText = e.target.value);
@@ -674,6 +679,7 @@
 
         // 8. Main Loop
         function animate() {
+            
             ctx.fillStyle = '#070a12';
             ctx.fillRect(0, 0, width, height);
 
@@ -681,11 +687,18 @@
             drawGimbalHUD();
 
             const maxDistance = parseFloat(rangeSlider.value);
-            const kCurvature = parseFloat(curvatureSlider.value);
+            let kCurvature = parseFloat(curvatureSlider.value); //added 'let' here
+            waveSolver.step(0.016); // a
+            // ssuming ~60fps delta time (~16ms)
+            const bulkData = adsMapper.mapBoundaryToBulk(waveSolver.current);
+            const currentPhi = window.phiCalculator.calculatePhi(nodes);
 
-            nodes.forEach(n => {
+            nodes.forEach((n, index) => {
                 n.update(kCurvature);
                 n.activeBonds = 0;
+                if (bulkData && bulkData[index] !== undefined) {
+                    n.z = bulkData[index] * 45.0;
+                }
             });
 
             let totalBondWeight = 0;
@@ -728,7 +741,6 @@
                 }
             }
 
-            // Render Nodes
             const projectedNodes = nodes.map(n => ({
                 node: n,
                 proj: project3D(n.x, n.y, n.z)
@@ -743,7 +755,6 @@
                 ctx.fill();
             });
 
-            // Metrics Update
             const activeNodes = nodes.filter(n => !n.isSevered);
             const integrity = initialActiveCount > 0 ? Math.round((activeNodes.length / initialActiveCount) * 100) : 100;
             const entropyVal = totalBondWeight * 0.46;
@@ -752,30 +763,24 @@
             document.getElementById('integrityMetric').innerText = `${integrity}%`;
             document.getElementById('entropyMetric').innerText = entropyVal.toFixed(2);
             document.getElementById('phiMetric').innerText = phiVal.toFixed(2);
-
-            // Update Selected Node HUD Panel
-            if (selectedNode) {
-                document.getElementById('telId').innerText = selectedNode.id;
-                document.getElementById('telClass').innerText = selectedNode.isCore ? 'Core Node' : 'Standard Node';
-                document.getElementById('telBonds').innerText = selectedNode.activeBonds;
-                document.getElementById('telPos').innerText = `(${selectedNode.x.toFixed(0)}, ${selectedNode.y.toFixed(0)}, ${selectedNode.z.toFixed(0)})`;
-            }
-
-            // Publish Telemetry to BroadcastChannel
-            if (window.telemetryBus && window.telemetryBus.publish) {
-                window.telemetryBus.publish({
+            if (window.telemetryBus) {
+                window.telemetryBus.push({
                     entropy: entropyVal,
-                    phi: phiVal,
+                    phi: currentPhi,
+                    causalDensity: window.phiCalculator.causalDensity,
                     activeNodes: activeNodes.length,
                     curvature: kCurvature,
-                    drift: parseFloat(driftSlider.value)
+                    drift: parseFloat(driftSlider.value),
+                    timestamp: performance.now()
                 });
             }
-
+            
             requestAnimationFrame(animate);
         }
 
         animate();
+        
     </script>
+    
 </body>
 </html>
