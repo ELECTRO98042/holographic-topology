@@ -694,12 +694,12 @@
             const currentPhi = window.phiCalculator.calculatePhi(nodes);
 
             nodes.forEach((n, index) => {
-                n.update(kCurvature);
-                n.activeBonds = 0;
-                if (bulkData && bulkData[index] !== undefined) {
-                    n.z = bulkData[index] * 45.0;
-                }
-            });
+    n.update(kCurvature);
+    n.activeBonds = 0;
+    if (bulkData && bulkData[index] !== undefined && nodes.length >= 32) {
+        n.z = bulkData[index] * 45.0;
+    }
+});
 
             let totalBondWeight = 0;
             let coreBondCount = 0;
@@ -759,6 +759,7 @@
             const integrity = initialActiveCount > 0 ? Math.round((activeNodes.length / initialActiveCount) * 100) : 100;
             const entropyVal = totalBondWeight * 0.46;
             const phiVal = activeNodes.length > 0 ? (coreBondCount * 2.5 + totalBondWeight) / activeNodes.length : 0;
+            
 
             document.getElementById('integrityMetric').innerText = `${integrity}%`;
             document.getElementById('entropyMetric').innerText = entropyVal.toFixed(2);
@@ -779,7 +780,66 @@
         }
 
         animate();
-        
+        // 5. Drag-and-Drop Topology Model Import
+        const canvasElement = document.getElementById('simCanvas');
+
+        canvasElement.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            canvasElement.style.borderColor = '#38bdf8';
+        });
+
+        canvasElement.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            canvasElement.style.borderColor = '';
+        });
+
+        canvasElement.addEventListener('drop', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    canvasElement.style.borderColor = '';
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        const file = files[0];
+        // Loosen the MIME type check to allow text/plain or empty types for IDE drag-and-drop
+        if (file.name.endsWith('.json') || file.type === 'application/json' || file.type === 'text/plain') {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const importedData = JSON.parse(event.target.result);
+                    validateAndLoadModel(importedData);
+                } catch (err) {
+                    console.error('Failed to parse imported JSON topology model:', err);
+                    alert('Invalid JSON file format. Check console for details.');
+                }
+            };
+            reader.readAsText(file);
+        } else {
+            alert('Please drop a valid .json topology model file.');
+        }
+    }
+});
+     
+function validateAndLoadModel(data) {
+    if (!data.nodes || !Array.isArray(data.nodes)) {
+        alert('Invalid topology schema: "nodes" array is missing.');
+        return;
+    }
+    
+    nodes.length = 0;
+    data.nodes.map(nData => {
+        const n = new Node(nData.x * 2.5, nData.y * 2.5, nData.z || 0, nData.isCore);
+        n.id = nData.id || n.id;
+        n.isSevered = !!nData.isSevered;
+        n.health = nData.health !== undefined ? nData.health : 1.0;
+        nodes.push(n);
+    });
+
+    initialActiveCount = nodes.filter(n => !n.isSevered).length;
+    console.log(`Successfully imported topology model with ${nodes.length} nodes.`);
+}
     </script>
     
 </body>
