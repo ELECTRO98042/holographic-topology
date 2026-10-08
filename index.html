@@ -795,6 +795,61 @@
             canvasElement.style.borderColor = '';
         });
 
+        function exportToDOT(nodeArray, threshold = 180) {
+    if (!Array.isArray(nodeArray) || nodeArray.length === 0) return "";
+
+    let dot = "graph HolographicTopology {\n";
+
+    // 1. Declare active nodes
+    nodeArray.forEach(n => {
+        if (!n.isSevered) {
+            dot += `  "${n.id}" [color="${n.isCore ? 'blue' : 'cyan'}"];\n`;
+        }
+    });
+
+    // 2. Compute spatial distance edges
+    let edgeCount = 0;
+    for (let i = 0; i < nodeArray.length; i++) {
+        for (let j = i + 1; j < nodeArray.length; j++) {
+            const n1 = nodeArray[i];
+            const n2 = nodeArray[j];
+
+            if (!n1.isSevered && !n2.isSevered) {
+                const dx = n1.x - n2.x;
+                const dy = n1.y - n2.y;
+                const dz = n1.z - n2.z;
+                const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+                if (dist <= threshold) {
+                    dot += `  "${n1.id}" -- "${n2.id}";\n`;
+                    edgeCount++;
+                }
+            }
+        }
+    }
+
+    dot += "}\n";
+    console.log(`[DOT Export] ${nodeArray.length} nodes, ${edgeCount} edges generated (threshold: ${threshold}px).`);
+    return dot;
+}
+
+// Assign to global scope for console testing
+window.exportToDOT = exportToDOT;
+
+// Single DOM Event Listener
+exportDotBtn.addEventListener('click', () => {
+    const currentThreshold = parseFloat(rangeSlider.value) || 180;
+    const dotData = window.exportToDOT(nodes, currentThreshold);
+
+    const dataStr = "data:text/plain;charset=utf-8," + encodeURIComponent(dotData);
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", "holographic_topology.dot");
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+});
+
         canvasElement.addEventListener('drop', (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -839,7 +894,9 @@ function validateAndLoadModel(data) {
 
     initialActiveCount = nodes.filter(n => !n.isSevered).length;
     console.log(`Successfully imported topology model with ${nodes.length} nodes.`);
-}
+
+    }
+    
     </script>
     
 </body>
